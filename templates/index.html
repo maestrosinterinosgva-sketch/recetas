@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>NutriChef AI - Analizador & Comparador Nutricional de Recetas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body class="min-h-full flex flex-col text-slate-800 antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('analyzer')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">NutriChef AI</span>
+                        <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 ml-2 bg-emerald-100 text-emerald-800 rounded-full">Multimodal</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden lg:flex space-x-1">
+                    <button onclick="switchTab('analyzer')" id="tab-nav-analyzer" class="nav-tab active-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-emerald-700 bg-emerald-50 transition">
+                        <i data-lucide="scan" class="w-4 h-4"></i>
+                        <span>Analizar Receta</span>
+                    </button>
+                    <button onclick="switchTab('pantry')" id="tab-nav-pantry" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition">
+                        <i data-lucide="cooking-pot" class="w-4 h-4 text-emerald-600"></i>
+                        <span>¿Qué cocino hoy?</span>
+                    </button>
+                    <button onclick="switchTab('foods')" id="tab-nav-foods" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition">
+                        <i data-lucide="package" class="w-4 h-4 text-amber-500"></i>
+                        <span>Mis Alimentos</span>
+                    </button>
+                    <button onclick="switchTab('recipes')" id="tab-nav-recipes" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition">
+                        <i data-lucide="book-marked" class="w-4 h-4"></i>
+                        <span>Mi Recetario</span>
+                    </button>
+                    <button onclick="switchTab('comparator')" id="tab-nav-comparator" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition">
+                        <i data-lucide="scale" class="w-4 h-4"></i>
+                        <span>Comparador</span>
+                        <span id="compare-badge" class="hidden text-[10px] bg-emerald-600 text-white rounded-full px-1.5 py-0.2">0</span>
+                    </button>
+                    <button onclick="switchTab('suggester')" id="tab-nav-suggester" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition">
+                        <i data-lucide="target" class="w-4 h-4"></i>
+                        <span>Por Metas</span>
+                    </button>
+                </nav>
+
+                <!-- Settings & API Key Pill -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="openConfigModal()" class="flex items-center space-x-2 px-3 py-1.5 rounded-full border border-slate-200 hover:border-emerald-300 bg-slate-50 hover:bg-emerald-50 text-xs font-medium text-slate-700 transition">
+                        <span id="api-status-indicator" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span id="api-status-text">Gemini IA Activo</span>
+                        <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-500"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom / Sub Navigation -->
+        <div class="flex lg:hidden border-t border-slate-200 overflow-x-auto bg-white py-1.5 px-2 space-x-1 scrollbar-none">
+            <button onclick="switchTab('analyzer')" id="tab-nav-mobile-analyzer" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700">Analizar</button>
+            <button onclick="switchTab('pantry')" id="tab-nav-mobile-pantry" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg text-slate-600">🍳 ¿Qué cocino?</button>
+            <button onclick="switchTab('foods')" id="tab-nav-mobile-foods" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg text-slate-600">🥫 Mis Alimentos</button>
+            <button onclick="switchTab('recipes')" id="tab-nav-mobile-recipes" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg text-slate-600">📖 Recetario</button>
+            <button onclick="switchTab('comparator')" id="tab-nav-mobile-comparator" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg text-slate-600">⚖️ Comparar</button>
+            <button onclick="switchTab('suggester')" id="tab-nav-mobile-suggester" class="flex-shrink-0 py-1.5 px-3 text-xs font-bold rounded-lg text-slate-600">🎯 Por Metas</button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: ANALIZADOR DE RECETAS (MULTIMODAL) -->
+        <!-- ========================================== -->
+        <section id="section-analyzer" class="space-y-8">
+            <!-- Header Hero -->
+            <div class="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                <div class="relative z-10 max-w-3xl">
+                    <span class="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-emerald-100 backdrop-blur-md mb-3">
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                        <span>Análisis Inteligente por IA</span>
+                    </span>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight">Analiza cualquier receta en segundos</h1>
+                    <p class="mt-2 text-sm sm:text-base text-emerald-100/90 leading-relaxed">
+                        Pega un texto libre, sube una foto de tu plato o un vídeo de cocina de TikTok, Instagram Reels o YouTube. Calculamos calorías, macronutrientes, Nutri-Score y recomendaciones saludables.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Input Mode Selector Box -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <!-- Modes Tabs -->
+                <div class="flex border-b border-slate-200 bg-slate-50/70 p-1.5 gap-1.5">
+                    <button onclick="setAnalysisInputMode('text')" id="mode-btn-text" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 bg-white text-emerald-700 shadow-sm border border-slate-200/60 transition">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>Texto / Escrito</span>
+                    </button>
+                    <button onclick="setAnalysisInputMode('image')" id="mode-btn-image" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 text-slate-600 hover:text-emerald-700 hover:bg-white/80 transition">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                        <span>Foto / Cámara</span>
+                    </button>
+                    <button onclick="setAnalysisInputMode('video')" id="mode-btn-video" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 text-slate-600 hover:text-emerald-700 hover:bg-white/80 transition">
+                        <i data-lucide="video" class="w-4 h-4"></i>
+                        <span>Vídeo / Red Social</span>
+                    </button>
+                </div>
+
+                <!-- Input Forms Body -->
+                <div class="p-6">
+                    <!-- 1. Text Form -->
+                    <div id="input-container-text" class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-sm font-semibold text-slate-700">Pega o escribe los ingredientes y la preparación:</label>
+                            <button type="button" onclick="loadSampleRecipeText()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center space-x-1">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>Cargar ejemplo rápido</span>
+                            </button>
+                        </div>
+                        <textarea id="recipe-text-input" rows="6" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm leading-relaxed outline-none transition" placeholder="Ejemplo:
+200g de pechuga de pollo cortada en dados
+1 calabacín mediano salteado
+150g de arroz integral cocido
+1 cucharada de aceite de oliva virgen extra
+Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
+                    </div>
+
+                    <!-- 2. Image Form -->
+                    <div id="input-container-image" class="hidden space-y-4">
+                        <label class="block text-sm font-semibold text-slate-700">Sube una foto de tu plato, libro o ingredientes:</label>
+                        <div id="image-dropzone" onclick="document.getElementById('image-file-input').click()" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-50/50 hover:bg-emerald-50/30">
+                            <input type="file" id="image-file-input" accept="image/*" class="hidden" onchange="handleImageSelected(event)">
+                            <div id="image-placeholder-view">
+                                <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-3">
+                                    <i data-lucide="image-plus" class="w-7 h-7"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-700">Haz clic para subir o arrastra una imagen aquí</p>
+                                <p class="text-xs text-slate-400 mt-1">Formatos soportados: JPG, PNG, WEBP, HEIC</p>
+                            </div>
+                            <div id="image-preview-view" class="hidden">
+                                <img id="image-preview-element" src="" alt="Previsualización" class="max-h-64 mx-auto rounded-xl shadow-md border border-slate-200 object-cover">
+                                <p id="image-filename" class="text-xs font-semibold text-emerald-700 mt-3"></p>
+                                <button type="button" onclick="clearSelectedImage(event)" class="mt-2 text-xs text-rose-600 hover:text-rose-700 font-medium">Cambiar imagen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Video / Social Media Form -->
+                    <div id="input-container-video" class="hidden space-y-6">
+                        <!-- Sub Option: URL or File -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Enlace de red social -->
+                            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+                                <div class="flex items-center space-x-2 text-slate-800 font-semibold text-sm">
+                                    <i data-lucide="link" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Opción A: Pegar enlace de Red Social</span>
+                                </div>
+                                <p class="text-xs text-slate-500">TikTok, Instagram Reels, YouTube Shorts o vídeos largos de cocina.</p>
+                                <input type="url" id="social-url-input" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none bg-white" placeholder="https://www.tiktok.com/@chef/video/... o YouTube">
+                                <button type="button" onclick="loadSampleSocialUrl()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Cargar enlace de prueba</button>
+                            </div>
+
+                            <!-- Subir archivo de vídeo -->
+                            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+                                <div class="flex items-center space-x-2 text-slate-800 font-semibold text-sm">
+                                    <i data-lucide="film" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Opción B: Subir archivo de Vídeo</span>
+                                </div>
+                                <p class="text-xs text-slate-500">Archivo de vídeo directo grabado desde tu móvil o cámara (MP4, MOV, WEBM).</p>
+                                <input type="file" id="video-file-input" accept="video/*" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón de Acción Principal -->
+                    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-xs text-slate-500 flex items-center space-x-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Cálculos bromatológicos basados en bases de datos nutricionales y Gemini IA.</span>
+                        </div>
+                        <button id="btn-trigger-analysis" onclick="executeAnalysis()" class="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-2 transition transform active:scale-95">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Analizar Nutrientes y Calorías</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner State -->
+            <div id="analysis-loading" class="hidden bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center space-y-4">
+                <div class="w-16 h-16 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin"></div>
+                <div class="space-y-1">
+                    <h3 id="loading-step-title" class="text-lg font-bold text-slate-800">Analizando receta con Inteligencia Artificial...</h3>
+                    <p id="loading-step-subtitle" class="text-sm text-slate-500">Desglosando ingredientes, calculando calorías y balance macro...</p>
+                </div>
+            </div>
+
+            <!-- Analysis Results View -->
+            <div id="analysis-results" class="hidden space-y-6">
+                <!-- Demo Mode Warning Banner -->
+                <div id="demo-warning-banner" class="hidden bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+                            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs sm:text-sm font-bold text-amber-900">Modo Demostración Activo (Sin clave de IA)</p>
+                            <p class="text-[11px] text-amber-700">Para analizar vídeos reales de Instagram o fotos con Gemini 3.8 Flash, añade tu clave gratuita de Google Gemini.</p>
+                        </div>
+                    </div>
+                    <button onclick="openConfigModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm flex-shrink-0 transition">
+                        Configurar Clave Ahora
+                    </button>
+                </div>
+
+                <!-- Top Card: Header, Dish Photo & Action Buttons -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 flex-1">
+                        <!-- Imagen destacada del plato terminado -->
+                        <div id="res-image-wrapper" class="hidden flex-shrink-0 relative">
+                            <img id="res-recipe-image" src="" alt="Resultado de la receta" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('hidden')" class="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl object-cover shadow-md border-2 border-emerald-100 ring-2 ring-emerald-50">
+                            <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
+                                📸 Resultado
+                            </span>
+                        </div>
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span id="res-source-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Texto</span>
+                                <span id="res-category-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">🍽️ Comida</span>
+                                <span id="res-servings-badge" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">2 raciones</span>
+                                <span id="res-time-badge" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">⏱️ 25 min</span>
+                                <a id="res-video-link" href="#" target="_blank" rel="noopener noreferrer" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition inline-flex items-center space-x-1">
+                                    <i data-lucide="video" class="w-3.5 h-3.5"></i>
+                                    <span>Ver vídeo original</span>
+                                </a>
+                            </div>
+                            <h2 id="res-recipe-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">Nombre de la Receta</h2>
+                            <p id="res-recipe-description" class="text-sm text-slate-600 leading-relaxed"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 self-start md:self-auto">
+                        <button onclick="saveCurrentRecipe()" id="btn-save-recipe" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm transition">
+                            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+                            <span>Guardar en Recetario</span>
+                        </button>
+                        <button onclick="addCurrentRecipeToCompare()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center space-x-1.5 transition">
+                            <i data-lucide="scale" class="w-4 h-4"></i>
+                            <span>Comparar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nutrients Highlights Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <!-- Nutri-Score -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nutri-Score</span>
+                        <div id="res-nutriscore" class="nutriscore-badge nutriscore-A my-1">A</div>
+                        <span class="text-[11px] text-slate-400 mt-1">Calidad Global</span>
+                    </div>
+
+                    <!-- Calorías -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Calorías</span>
+                        <div class="text-2xl font-extrabold text-emerald-600"><span id="res-calories">0</span> <span class="text-xs font-normal text-slate-500">kcal</span></div>
+                        <span id="res-serving-label" class="text-[11px] text-slate-400 mt-1">Por ración</span>
+                    </div>
+
+                    <!-- Proteínas -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Proteínas</span>
+                        <div class="text-2xl font-extrabold text-blue-600"><span id="res-protein">0</span> <span class="text-xs font-normal text-slate-500">g</span></div>
+                        <span class="text-[11px] text-slate-400 mt-1" id="res-protein-pct">0% kcal</span>
+                    </div>
+
+                    <!-- Carbohidratos -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Carbohidratos</span>
+                        <div class="text-2xl font-extrabold text-amber-600"><span id="res-carbs">0</span> <span class="text-xs font-normal text-slate-500">g</span></div>
+                        <span class="text-[11px] text-slate-400 mt-1" id="res-carbs-pct">0% kcal</span>
+                    </div>
+
+                    <!-- Grasas -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Grasas Totales</span>
+                        <div class="text-2xl font-extrabold text-rose-600"><span id="res-fats">0</span> <span class="text-xs font-normal text-slate-500">g</span></div>
+                        <span class="text-[11px] text-slate-400 mt-1" id="res-fats-pct">0% kcal</span>
+                    </div>
+
+                    <!-- Fibra -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fibra</span>
+                        <div class="text-2xl font-extrabold text-teal-600"><span id="res-fiber">0</span> <span class="text-xs font-normal text-slate-500">g</span></div>
+                        <span class="text-[11px] text-slate-400 mt-1">Salud intestinal</span>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown: Macros Chart & Micro Table -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Gráfico de Dona de Macronutrientes -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center justify-between">
+                        <div class="w-full flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
+                            <h3 class="text-sm font-bold text-slate-800">Distribución de Macronutrientes</h3>
+                            <span class="text-xs text-slate-500">Calorías %</span>
+                        </div>
+                        <div class="w-56 h-56 relative my-auto">
+                            <canvas id="macroDonutChart"></canvas>
+                        </div>
+                        <div class="w-full grid grid-cols-3 gap-2 text-center pt-3 border-t border-slate-100 text-xs">
+                            <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 mr-1"></span>Proteína</div>
+                            <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span>Carbos</div>
+                            <div><span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 mr-1"></span>Grasas</div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Micronutrientes y Detalle por Ración / Total -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="text-sm font-bold text-slate-800">Desglose Bromatológico Completo</h3>
+                            <div class="text-xs text-slate-500 flex items-center space-x-2">
+                                <span class="font-semibold text-slate-700">Por ración vs Total receta</span>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-100">
+                                        <th class="py-2 font-medium">Nutriente</th>
+                                        <th class="py-2 font-medium">Por Ración</th>
+                                        <th class="py-2 font-medium">Total de la Receta</th>
+                                        <th class="py-2 font-medium">Evaluación</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-slate-700">
+                                    <tr>
+                                        <td class="py-2 font-semibold">Azúcares simples</td>
+                                        <td class="py-2" id="res-sugar-serving">0 g</td>
+                                        <td class="py-2" id="res-sugar-total">0 g</td>
+                                        <td class="py-2"><span id="res-sugar-tag" class="px-2 py-0.5 rounded text-[10px] bg-slate-100">Bajo</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 font-semibold">Grasas saturadas</td>
+                                        <td class="py-2" id="res-satfat-serving">0 g</td>
+                                        <td class="py-2" id="res-satfat-total">0 g</td>
+                                        <td class="py-2"><span id="res-satfat-tag" class="px-2 py-0.5 rounded text-[10px] bg-slate-100">Moderado</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 font-semibold">Sodio</td>
+                                        <td class="py-2" id="res-sodium-serving">0 mg</td>
+                                        <td class="py-2" id="res-sodium-total">0 mg</td>
+                                        <td class="py-2"><span id="res-sodium-tag" class="px-2 py-0.5 rounded text-[10px] bg-slate-100">Bajo</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 font-semibold">Colesterol</td>
+                                        <td class="py-2" id="res-chol-serving">0 mg</td>
+                                        <td class="py-2" id="res-chol-total">0 mg</td>
+                                        <td class="py-2"><span class="text-slate-400">-</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 font-semibold">Potasio</td>
+                                        <td class="py-2" id="res-potassium-serving">0 mg</td>
+                                        <td class="py-2" id="res-potassium-total">0 mg</td>
+                                        <td class="py-2"><span class="text-slate-400">-</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Vitaminas y Minerales Destacados -->
+                        <div class="pt-2">
+                            <span class="text-xs font-semibold text-slate-500 block mb-2">Vitaminas y Minerales Destacados:</span>
+                            <div id="res-vitamins-container" class="flex flex-wrap gap-1.5">
+                                <!-- Chips insertados dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Etiquetas Dietéticas -->
+                        <div class="pt-2">
+                            <span class="text-xs font-semibold text-slate-500 block mb-2">Etiquetas Dietéticas:</span>
+                            <div id="res-tags-container" class="flex flex-wrap gap-1.5">
+                                <!-- Chips de etiquetas -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ingredients & Instructions Accordion/Split -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ingredientes Detectados con Aporte -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                            <i data-lucide="shopping-basket" class="w-5 h-5 text-emerald-600"></i>
+                            <h3 class="text-base font-bold text-slate-800">Ingredientes Detectados</h3>
+                        </div>
+                        <ul id="res-ingredients-list" class="space-y-2.5 text-xs">
+                            <!-- Items generados dinámicamente -->
+                        </ul>
+                    </div>
+
+                    <!-- Instrucciones de Elaboración -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                            <i data-lucide="chef-hat" class="w-5 h-5 text-emerald-600"></i>
+                            <h3 class="text-base font-bold text-slate-800">Pasos de Preparación</h3>
+                        </div>
+                        <ol id="res-instructions-list" class="space-y-3 text-xs leading-relaxed">
+                            <!-- Pasos generados dinámicamente -->
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Nutricionista AI Verdict & Suggestions -->
+                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-200 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                            <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-emerald-950">Veredicto Nutricional & Recomendaciones</h3>
+                            <p class="text-xs text-emerald-800/80">Evaluación profesional basada en evidencia</p>
+                        </div>
+                    </div>
+                    <p id="res-verdict-text" class="text-xs sm:text-sm text-slate-700 leading-relaxed bg-white/70 p-4 rounded-xl border border-emerald-100"></p>
+                    
+                    <div class="space-y-2 pt-1">
+                        <span class="text-xs font-bold text-emerald-900 block">💡 Consejos para hacerla aún más saludable:</span>
+                        <ul id="res-alternatives-list" class="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
+                            <!-- Alternativas saludables -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: ¿QUÉ COCINO HOY? (NEVERA & DESPENSA IA) -->
+        <!-- ========================================== -->
+        <section id="section-pantry" class="hidden space-y-8">
+            <!-- Hero Banner -->
+            <div class="bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="max-w-2xl relative z-10">
+                    <span class="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-emerald-100 mb-3">
+                        <i data-lucide="cooking-pot" class="w-3.5 h-3.5 text-amber-300"></i>
+                        <span>Cocina Inteligente de Aprovechamiento</span>
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">¿Qué tienes por casa?</h2>
+                    <p class="mt-2 text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+                        Indica los ingredientes que tienes en tu nevera o despensa. NutriChef IA diseñará recetas deliciosas y saludables calculadas para aprovecharlos al máximo sin tirar nada.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Formulario de Nevera / Despensa -->
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                <!-- Ingredientes y Cantidades a mano -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
+                            <i data-lucide="scale" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Ingredientes y cantidades que tienes disponibles:</span>
+                        </label>
+                        <button type="button" onclick="clearPantryItems()" id="btn-clear-pantry" class="hidden text-[11px] font-semibold text-rose-600 hover:text-rose-700 underline">
+                            Vaciar lista
+                        </button>
+                    </div>
+
+                    <!-- Fila para añadir cualquier ingrediente con cantidad -->
+                    <div class="p-3 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                            <!-- Nombre -->
+                            <div class="sm:col-span-6 relative">
+                                <input type="text" id="pantry-manual-name" placeholder="Escribe ingrediente (ej: Huevos, Pechuga, Cebolla...)" onkeydown="if(event.key==='Enter'){event.preventDefault();addManualPantryItem();}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-white">
+                            </div>
+                            <!-- Cantidad -->
+                            <div class="sm:col-span-3">
+                                <div class="relative">
+                                    <input type="number" id="pantry-manual-amount" value="100" min="1" step="any" placeholder="Cant." onkeydown="if(event.key==='Enter'){event.preventDefault();addManualPantryItem();}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-white text-center font-bold text-emerald-800">
+                                </div>
+                            </div>
+                            <!-- Unidad -->
+                            <div class="sm:col-span-3">
+                                <select id="pantry-manual-unit" class="w-full px-2.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-white font-medium text-slate-700">
+                                    <option value="g">gramos (g)</option>
+                                    <option value="unidad(es)">unidad(es)</option>
+                                    <option value="ml">mililitros (ml)</option>
+                                    <option value="lata(s)">lata(s)</option>
+                                    <option value="cucharada(s)">cucharada(s)</option>
+                                    <option value="rebanada(s)">rebanada(s)</option>
+                                    <option value="puñado(s)">puñado(s)</option>
+                                    <option value="al gusto">al gusto / pizca</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400">Indica la cantidad exacta que tienes disponible</span>
+                            <button type="button" onclick="addManualPantryItem()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center space-x-1.5 transition flex-shrink-0">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Añadir a la lista</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Botones rápidos de alimentos de la despensa -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-semibold text-slate-500 flex items-center space-x-1">
+                                <i data-lucide="package" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Añadir con 1 clic de tus alimentos habituales:</span>
+                            </span>
+                            <button type="button" onclick="switchTab('foods')" class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline">
+                                Gestionar alimentos
+                            </button>
+                        </div>
+                        <div id="pantry-quick-badges" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                            <!-- Alimentos rápidos cargados dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Lista Interactiva de Ingredientes Seleccionados con sus Cantidades -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                                <span>Ingredientes en tu cesta actual:</span>
+                                <span id="pantry-items-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">0 ingredientes</span>
+                            </span>
+                        </div>
+
+                        <!-- Grid/Lista de items añadidos -->
+                        <div id="pantry-items-list-container" class="space-y-2">
+                            <!-- Items generados dinámicamente con sus inputs de cantidad y botones +/- -->
+                        </div>
+                    </div>
+
+                    <!-- Campo opcional de notas / ingredientes extra en texto libre -->
+                    <div class="pt-2">
+                        <details class="group">
+                            <summary class="text-xs font-semibold text-slate-500 hover:text-emerald-700 cursor-pointer list-none flex items-center space-x-1">
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 transition group-open:rotate-90"></i>
+                                <span>+ Añadir notas o ingredientes extra en texto libre (opcional)</span>
+                            </summary>
+                            <div class="mt-2">
+                                <textarea id="pantry-ingredients-input" rows="2" placeholder="Ej: Me sobró un trozo de pimiento rojo, tengo salsa de soja y una pizca de orégano..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-slate-50/50 focus:bg-white transition resize-none"></textarea>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- Filtros y preferencias de la receta -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
+                    <!-- Momento del Día -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Momento del Día</label>
+                        <select id="pantry-meal-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="comida">🍽️ Comida principal</option>
+                            <option value="cena">🌙 Cena rápida y ligera</option>
+                            <option value="desayuno">🌅 Desayuno energético</option>
+                            <option value="merienda-postre">☕ Merienda / Postre fit</option>
+                            <option value="cualquiera">Cualquiera</option>
+                        </select>
+                    </div>
+
+                    <!-- Tiempo disponible -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Tiempo de Preparación</label>
+                        <select id="pantry-cooking-time" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="rapida">⚡ Express (< 15 min)</option>
+                            <option value="media">⏱️ Estándar (~30 min)</option>
+                            <option value="elaborada">🍳 Sin prisas (elaborada)</option>
+                        </select>
+                    </div>
+
+                    <!-- Estilo dietético -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Estilo / Objetivo</label>
+                        <select id="pantry-diet-style" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="saludable">🥗 Saludable y equilibrada</option>
+                            <option value="alta en proteina">💪 Alta en proteína (Fitness)</option>
+                            <option value="baja en calorias">🌿 Ligera / Baja en calorías</option>
+                            <option value="vegetariana">🥦 100% Vegetariana</option>
+                        </select>
+                    </div>
+
+                    <!-- Comensales -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Raciones / Personas</label>
+                        <select id="pantry-servings" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="1">1 persona (individual)</option>
+                            <option value="2" selected>2 personas (pareja)</option>
+                            <option value="4">4 personas (familia)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Botón de Acción -->
+                <div class="flex items-center justify-end pt-2">
+                    <button type="button" onclick="generateRecipesFromPantry()" id="btn-generate-pantry" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-2 transition transform active:scale-95">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Diseñar Receta con mis Ingredientes</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="pantry-loading" class="hidden bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center space-y-4">
+                <div class="w-14 h-14 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin"></div>
+                <div class="space-y-1">
+                    <h3 class="text-base font-bold text-slate-800">Diseñando tu receta de aprovechamiento...</h3>
+                    <p class="text-xs text-slate-500">Optimizando tus ingredientes y calculando nutrientes precisos con IA...</p>
+                </div>
+            </div>
+
+            <!-- Grid de Recetas de Despensa Generadas -->
+            <div id="pantry-results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Se insertan aquí las recetas generadas -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: MIS ALIMENTOS Y PRODUCTOS HABITUALES -->
+        <!-- ========================================== -->
+        <section id="section-foods" class="hidden space-y-8">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-amber-800 via-amber-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+                    <div class="max-w-2xl">
+                        <span class="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-amber-100 mb-3">
+                            <i data-lucide="package" class="w-3.5 h-3.5 text-amber-300"></i>
+                            <span>Mi Despensa & Valores Nutricionales</span>
+                        </span>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Mis Alimentos y Productos</h2>
+                        <p class="mt-2 text-xs sm:text-sm text-amber-100/90 leading-relaxed">
+                            Registra los alimentos y marcas que sueles comprar con sus macros reales por 100g. Úsalos para pedirle recetas exactas a la IA y tener siempre a mano tu despensa.
+                        </p>
+                    </div>
+                    <button onclick="openAddFoodModal()" class="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-lg shadow-amber-500/30 flex items-center space-x-2 transition transform active:scale-95 flex-shrink-0">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>Añadir Nuevo Alimento</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controles: Buscador y Filtros por Categoría de Alimento -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" id="foods-category-pills">
+                    <button onclick="setFoodCategoryFilter('all')" data-cat="all" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-emerald-600 text-white shadow-sm flex-shrink-0">
+                        Todos (<span id="count-foods-all">0</span>)
+                    </button>
+                    <button onclick="setFoodCategoryFilter('proteina')" data-cat="proteina" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex-shrink-0">
+                        🥩 Proteínas (<span id="count-foods-proteina">0</span>)
+                    </button>
+                    <button onclick="setFoodCategoryFilter('carbohidrato')" data-cat="carbohidrato" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex-shrink-0">
+                        🍚 Carbohidratos (<span id="count-foods-carbohidrato">0</span>)
+                    </button>
+                    <button onclick="setFoodCategoryFilter('verdura')" data-cat="verdura" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex-shrink-0">
+                        🥦 Verduras / Frutas (<span id="count-foods-verdura">0</span>)
+                    </button>
+                    <button onclick="setFoodCategoryFilter('lacteo')" data-cat="lacteo" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex-shrink-0">
+                        🥛 Lácteos (<span id="count-foods-lacteo">0</span>)
+                    </button>
+                    <button onclick="setFoodCategoryFilter('grasa')" data-cat="grasa" class="food-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex-shrink-0">
+                        🥑 Grasas / Aceites (<span id="count-foods-grasa">0</span>)
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="food-search-input" oninput="filterFoodsGrid()" placeholder="Buscar alimento o marca..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-64 bg-white">
+                </div>
+            </div>
+
+            <!-- Grid de Alimentos Guardados -->
+            <div id="custom-foods-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Tarjetas de alimentos cargadas dinámicamente -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: COMPARADOR DE RECETAS -->
+        <!-- ========================================== -->
+        <section id="section-comparator" class="hidden space-y-8">
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center space-x-2">
+                            <i data-lucide="scale" class="w-6 h-6 text-emerald-600"></i>
+                            <span>Comparador Nutricional Cara a Cara</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Selecciona 2 o 3 recetas de tu recetario para analizar sus diferencias en calorías, proteínas y micronutrientes.</p>
+                    </div>
+                    <button onclick="runComparison()" id="btn-run-compare" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center space-x-1.5 transition">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                        <span>Comparar Seleccionadas</span>
+                    </button>
+                </div>
+
+                <!-- Recipe Checkboxes Selector -->
+                <div class="border-t border-slate-100 pt-4">
+                    <span class="text-xs font-semibold text-slate-600 block mb-3">Elige las recetas a comparar:</span>
+                    <div id="compare-selection-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <!-- Generado dinámicamente desde recetas guardadas -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Output -->
+            <div id="comparison-results" class="hidden space-y-6">
+                <!-- Winners Summary Banner -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Winner Muscle -->
+                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-5 shadow-sm space-y-2">
+                        <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-blue-100">
+                            <i data-lucide="biceps-flexed" class="w-4 h-4"></i>
+                            <span>Ganancia Muscular</span>
+                        </div>
+                        <p id="cmp-winner-muscle" class="text-xs font-medium leading-relaxed text-blue-50"></p>
+                    </div>
+
+                    <!-- Winner Fat Loss -->
+                    <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-5 shadow-sm space-y-2">
+                        <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-emerald-100">
+                            <i data-lucide="flame" class="w-4 h-4"></i>
+                            <span>Pérdida de Grasa</span>
+                        </div>
+                        <p id="cmp-winner-fatloss" class="text-xs font-medium leading-relaxed text-emerald-50"></p>
+                    </div>
+
+                    <!-- Winner Health -->
+                    <div class="bg-gradient-to-br from-teal-600 to-cyan-700 text-white rounded-2xl p-5 shadow-sm space-y-2">
+                        <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-teal-100">
+                            <i data-lucide="heart-pulse" class="w-4 h-4"></i>
+                            <span>Salud Integral</span>
+                        </div>
+                        <p id="cmp-winner-health" class="text-xs font-medium leading-relaxed text-teal-50"></p>
+                    </div>
+                </div>
+
+                <!-- Comparison Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Comparativa de Macronutrientes por Ración (g)</h3>
+                        <div class="h-64">
+                            <canvas id="compareBarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Balance Calórico (Kcal) & Fibra (g)</h3>
+                        <div class="h-64">
+                            <canvas id="compareCaloriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side-by-side Table -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-800">Tabla Comparativa Detallada</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="comparison-table">
+                            <!-- Generado dinámicamente -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: SUGERENCIAS POR METAS NUTRICIONALES -->
+        <!-- ========================================== -->
+        <section id="section-suggester" class="hidden space-y-8">
+            <div class="bg-gradient-to-r from-teal-800 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="max-w-2xl">
+                    <span class="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-emerald-100 mb-3">
+                        <i data-lucide="target" class="w-3.5 h-3.5"></i>
+                        <span>Generador Inteligente</span>
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Sugerencias a Medida de tus Necesidades</h2>
+                    <p class="mt-2 text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+                        Indica los nutrientes o calorías que deseas ingerir y tu despensa disponible. La IA diseñará recetas precisas que encajen matemáticamente en tus objetivos nutricionales.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Suggester Filter Form -->
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Calorías objetivo -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Calorías Máximas / Deseadas</label>
+                        <div class="relative">
+                            <input type="number" id="sug-calories" value="500" min="150" max="2500" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                            <span class="absolute right-3 top-2.5 text-xs text-slate-400">kcal</span>
+                        </div>
+                    </div>
+
+                    <!-- Mínimo de proteína -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Mínimo de Proteína</label>
+                        <div class="relative">
+                            <input type="number" id="sug-protein" value="35" min="5" max="150" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                            <span class="absolute right-3 top-2.5 text-xs text-slate-400">g</span>
+                        </div>
+                    </div>
+
+                    <!-- Máximo de carbohidratos -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Máximo de Carbohidratos</label>
+                        <div class="relative">
+                            <input type="number" id="sug-carbs" placeholder="Opcional (ej: 40)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                            <span class="absolute right-3 top-2.5 text-xs text-slate-400">g</span>
+                        </div>
+                    </div>
+
+                    <!-- Máximo de grasas -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Máximo de Grasas</label>
+                        <div class="relative">
+                            <input type="number" id="sug-fat" placeholder="Opcional (ej: 15)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                            <span class="absolute right-3 top-2.5 text-xs text-slate-400">g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+                    <!-- Tipo de Dieta -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Estilo de Dieta</label>
+                        <select id="sug-diet" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="Cualquiera">Cualquiera (Equilibrada)</option>
+                            <option value="Alta en proteína">Alta en Proteína / Fitness</option>
+                            <option value="Mediterránea">Mediterránea Tradicional</option>
+                            <option value="Keto">Cetogénica (Keto)</option>
+                            <option value="Vegetariana">Vegetariana</option>
+                            <option value="Vegana">Vegana 100% vegetal</option>
+                            <option value="Baja en sodio">Baja en Sodio (Cardiosaludable)</option>
+                            <option value="Sin gluten">Sin Gluten</option>
+                        </select>
+                    </div>
+
+                    <!-- Momento del Día -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Momento del Día</label>
+                        <select id="sug-meal" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white">
+                            <option value="Almuerzo">Almuerzo / Comida principal</option>
+                            <option value="Cena">Cena ligera y saciante</option>
+                            <option value="Desayuno">Desayuno energético</option>
+                            <option value="Snack / Pre-entreno">Snack o Pre-entreno</option>
+                        </select>
+                    </div>
+
+                    <!-- Ingredientes en despensa -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Ingredientes en mi Despensa (Opcional)</label>
+                        <input type="text" id="sug-ingredients" placeholder="Ej: Pollo, huevos, arroz, espinacas" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end pt-3">
+                    <button onclick="generateRecipeSuggestions()" id="btn-generate-sug" class="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 flex items-center space-x-2 transition transform active:scale-95">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Generar Recetas a Medida</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Suggestions Loading -->
+            <div id="suggestions-loading" class="hidden bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center space-y-4">
+                <div class="w-14 h-14 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin"></div>
+                <h3 class="text-base font-bold text-slate-800">Diseñando recetas con el perfil nutricional solicitado...</h3>
+            </div>
+
+            <!-- Suggestions Results Grid -->
+            <div id="suggestions-results-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tarjetas de sugerencias insertadas dinámicamente -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: MI RECETARIO GUARDADO -->
+        <!-- ========================================== -->
+        <section id="section-recipes" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center space-x-2">
+                        <i data-lucide="book-marked" class="w-6 h-6 text-emerald-600"></i>
+                        <span>Mi Recetario Guardado</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-0.5">Colección de recetas analizadas, comparadas y personalizadas.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input type="text" id="recipe-search" oninput="filterRecipesList()" placeholder="Buscar por nombre o ingrediente..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-64 bg-white">
+                </div>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" id="category-filter-container">
+                <button type="button" onclick="setCategoryFilter('all')" id="cat-btn-all" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 flex-shrink-0">
+                    <span>Todas</span>
+                    <span id="cat-count-all" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-white/20">0</span>
+                </button>
+                <button type="button" onclick="setCategoryFilter('desayuno')" id="cat-btn-desayuno" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>🌅 Desayunos</span>
+                    <span id="cat-count-desayuno" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+                <button type="button" onclick="setCategoryFilter('comida')" id="cat-btn-comida" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>🍽️ Comidas</span>
+                    <span id="cat-count-comida" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+                <button type="button" onclick="setCategoryFilter('merienda-postre')" id="cat-btn-merienda-postre" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>☕ Meriendas & Postres</span>
+                    <span id="cat-count-merienda-postre" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+                <button type="button" onclick="setCategoryFilter('cena')" id="cat-btn-cena" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>🌙 Cenas</span>
+                    <span id="cat-count-cena" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+            </div>
+
+            <!-- Recipes Grid -->
+            <div id="recipes-book-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tarjetas de recetas del recetario -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Detalle de Receta Guardada -->
+    <div id="recipe-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h3 id="modal-title" class="text-lg font-bold text-slate-800">Detalle de Receta</h3>
+                <button onclick="closeRecipeModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="modal-body" class="p-6 overflow-y-auto space-y-6 text-xs text-slate-700">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Modificar Foto de Receta -->
+    <div id="edit-photo-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">Cambiar Foto de la Receta</h3>
+                </div>
+                <button onclick="closeEditPhotoModal()" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="edit-photo-recipe-id">
+            <p id="edit-photo-recipe-title" class="text-xs font-bold text-slate-700 line-clamp-1"></p>
+
+            <!-- Previsualización actual -->
+            <div class="space-y-1.5">
+                <label class="block text-xs font-semibold text-slate-500">Vista previa:</label>
+                <div class="w-full h-44 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative">
+                    <img id="edit-photo-preview" src="" alt="Previsualización" class="w-full h-full object-cover">
+                </div>
+            </div>
+
+            <!-- Opciones para cambiar -->
+            <div class="space-y-3">
+                <!-- Opción 1: Subir archivo o cámara del móvil -->
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1">
+                        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Opción A: Subir foto o hacer foto con la cámara</span>
+                    </span>
+                    <input type="file" id="edit-photo-file-input" accept="image/*" onchange="handleRecipePhotoFileSelected(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer">
+                </div>
+
+                <!-- Opción 2: Enlace URL -->
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1">
+                        <i data-lucide="link" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Opción B: Pegar enlace o URL de internet</span>
+                    </span>
+                    <input type="url" id="edit-photo-url-input" oninput="handleRecipePhotoUrlInput(this.value)" placeholder="https://ejemplo.com/foto-receta.jpg" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-white">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeEditPhotoModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button type="button" onclick="saveRecipePhoto()" id="btn-save-recipe-photo" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    <span>Guardar Foto</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Configuración de Gemini API Key -->
+    <div id="config-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">Configuración de Gemini API</h3>
+                </div>
+                <button onclick="closeConfigModal()" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Introduce tu clave de API de Google Gemini para habilitar el análisis en tiempo real de vídeos de redes sociales, fotos y textos con el modelo <strong>Gemini 3.8 Flash</strong>.
+            </p>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700 uppercase">GEMINI_API_KEY</label>
+                <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-mono">
+                <p class="text-[11px] text-slate-400">¿No tienes clave? Obtén una gratis en <a href="https://aistudio.google.com/apikey" target="_blank" class="text-emerald-600 underline font-medium">Google AI Studio</a>.</p>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button onclick="closeConfigModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button onclick="saveApiKey()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">Guardar Clave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Añadir / Editar Alimento Personalizado -->
+    <div id="food-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <i data-lucide="package" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="food-modal-title" class="text-base font-bold text-slate-800">Añadir Alimento a mi Despensa</h3>
+                </div>
+                <button onclick="closeFoodModal()" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <input type="hidden" id="food-form-id">
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">Nombre del Alimento *</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="food-form-name" placeholder="Ej: Pechuga de pavo, Queso cottage, Avena..." class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                        <button type="button" onclick="autoEstimateFoodWithAi()" id="btn-estimate-ai" class="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 flex items-center space-x-1.5 transition flex-shrink-0" title="Calcula automáticamente las calorías y macros con IA">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <span>Autocompletar con IA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase mb-1">Marca / Supermercado</label>
+                        <input type="text" id="food-form-brand" placeholder="Ej: Hacendado, Mercadona..." class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase mb-1">Categoría</label>
+                        <select id="food-form-category" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white">
+                            <option value="proteina">🥩 Proteína</option>
+                            <option value="carbohidrato">🍚 Carbohidrato</option>
+                            <option value="verdura">🥦 Verdura / Fruta</option>
+                            <option value="lacteo">🥛 Lácteo</option>
+                            <option value="grasa">🥑 Grasa / Aceite</option>
+                            <option value="despensa">🥫 Despensa / Otros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                    <span class="font-bold text-slate-700 block">Valores Nutricionales por cada 100g (o ración base):</span>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Calorías (kcal)</label>
+                            <input type="number" step="0.1" id="food-form-calories" placeholder="100" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-emerald-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Proteínas (g)</label>
+                            <input type="number" step="0.1" id="food-form-protein" placeholder="10" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-blue-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Carbos (g)</label>
+                            <input type="number" step="0.1" id="food-form-carbs" placeholder="20" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-amber-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Grasas (g)</label>
+                            <input type="number" step="0.1" id="food-form-fats" placeholder="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-rose-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Fibra (g)</label>
+                            <input type="number" step="0.1" id="food-form-fiber" placeholder="1" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">Ración base (g/ml)</label>
+                            <input type="number" id="food-form-serving" value="100" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">Notas (Opcional)</label>
+                    <input type="text" id="food-form-notes" placeholder="Ej: Alto en omega 3, sin azúcar añadido..." class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button onclick="closeFoodModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button onclick="submitFoodForm()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">Guardar Alimento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

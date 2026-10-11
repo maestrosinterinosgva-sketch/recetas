@@ -1,0 +1,75 @@
+/* Estilos personalizados NutriChef AI */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+
+/* Glassmorphism & Cards */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.gradient-hero {
+    background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0284c7 100%);
+}
+
+/* Nutri-Score Badges */
+.nutriscore-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.nutriscore-A { background-color: #038141; }
+.nutriscore-B { background-color: #85bb2f; }
+.nutriscore-C { background-color: #fecb02; color: #1f2937; }
+.nutriscore-D { background-color: #ee8100; }
+.nutriscore-E { background-color: #e63e11; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Animations */
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Drag and Drop Zone */
+.dropzone-active {
+    border-color: #10b981 !important;
+    background-color: #ecfdf5 !important;
+}

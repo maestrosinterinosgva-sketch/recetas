@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+.neon/
+
+# Local Environment and DB
+.env
+*.db
+*.sqlite3
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
