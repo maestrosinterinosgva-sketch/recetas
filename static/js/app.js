@@ -987,9 +987,31 @@ function closeRecipeModal() {
 }
 
 // ==========================================
-// PHOTO MODAL HANDLERS
+// ==========================================
+// PHOTO MODAL HANDLERS & IMAGE SEARCH
 // ==========================================
 let editPhotoSelectedFile = null;
+let currentPhotoResults = [];
+
+function switchEditPhotoTab(tab) {
+    const tabs = ['search', 'ai', 'upload', 'url'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-photo-${t}`);
+        const panel = document.getElementById(`photo-tab-panel-${t}`);
+        if (t === tab) {
+            if (btn) {
+                btn.className = 'px-3 py-2 font-bold rounded-xl transition text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center space-x-1.5';
+            }
+            if (panel) panel.classList.remove('hidden');
+        } else {
+            if (btn) {
+                btn.className = 'px-3 py-2 font-semibold rounded-xl transition text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center space-x-1.5';
+            }
+            if (panel) panel.classList.add('hidden');
+        }
+    });
+    safeCreateIcons();
+}
 
 function openEditPhotoModal(recipeId, event) {
     if (event) event.stopPropagation();
@@ -998,25 +1020,198 @@ function openEditPhotoModal(recipeId, event) {
 
     document.getElementById('edit-photo-recipe-id').value = recipeId;
     document.getElementById('edit-photo-recipe-title').textContent = recipe.title || 'Receta';
+
+    const aiDishName = document.getElementById('edit-photo-ai-dish-name');
+    if (aiDishName) aiDishName.textContent = recipe.title || 'este plato';
+
     const preview = document.getElementById('edit-photo-preview');
     if (preview) {
-        preview.src = recipe.image_url || 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=600&q=80';
+        preview.src = recipe.image_url || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=700&auto=format&fit=crop&q=80';
     }
+
+    const selectedLabel = document.getElementById('edit-photo-selected-label');
+    if (selectedLabel) selectedLabel.textContent = 'Foto actual del plato';
+
     const fileInput = document.getElementById('edit-photo-file-input');
     if (fileInput) fileInput.value = '';
+
     const urlInput = document.getElementById('edit-photo-url-input');
     if (urlInput) urlInput.value = (recipe.image_url && recipe.image_url.startsWith('http')) ? recipe.image_url : '';
+
+    const searchInput = document.getElementById('photo-search-input');
+    if (searchInput) searchInput.value = recipe.title || '';
+
+    const aiStatusMsg = document.getElementById('photo-ai-status-msg');
+    if (aiStatusMsg) {
+        aiStatusMsg.classList.add('hidden');
+        aiStatusMsg.innerHTML = '';
+    }
+
     editPhotoSelectedFile = null;
+
+    // Abrir por defecto en pestaña buscar
+    switchEditPhotoTab('search');
 
     const modal = document.getElementById('edit-photo-modal');
     if (modal) modal.classList.remove('hidden');
     safeCreateIcons();
+
+    // Búsqueda automática inicial
+    searchPhotosModal();
 }
 
 function closeEditPhotoModal() {
     const modal = document.getElementById('edit-photo-modal');
     if (modal) modal.classList.add('hidden');
     editPhotoSelectedFile = null;
+}
+
+async function searchPhotosModal() {
+    const query = (document.getElementById('photo-search-input')?.value || '').trim();
+    const grid = document.getElementById('photo-search-results-grid');
+    const btn = document.getElementById('btn-photo-search-action');
+    if (!grid) return;
+
+    if (!query) {
+        grid.innerHTML = '<p class="col-span-full text-slate-400 text-center py-6 text-xs">Introduce el nombre de la receta para buscar fotos.</p>';
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    grid.innerHTML = `
+        <div class="col-span-full py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2">
+            <span class="inline-block animate-spin text-lg">⏳</span>
+            <span>Buscando fotografías gastronómicas para "${escapeHtml(query)}"...</span>
+        </div>
+    `;
+
+    try {
+        const resp = await fetch(`/api/recipes/search-images?q=${encodeURIComponent(query)}`);
+        if (!resp.ok) throw new Error('Error al buscar imágenes.');
+        const data = await resp.json();
+        const results = data.results || [];
+        currentPhotoResults = results;
+
+        if (results.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full py-6 text-center text-slate-400 text-xs">
+                    <p>No se encontraron fotos exactas para "${escapeHtml(query)}".</p>
+                    <p class="text-[11px] text-emerald-600 mt-1 cursor-pointer font-semibold underline" onclick="document.getElementById('photo-search-input').value='plato comida'; searchPhotosModal();">Ver sugerencias generales</p>
+                </div>
+            `;
+            return;
+        }
+
+        const currentUrl = (document.getElementById('edit-photo-url-input')?.value || '').trim();
+        grid.innerHTML = results.map((item, idx) => {
+            const isSelected = item.url === currentUrl;
+            return `
+                <div onclick="selectPhotoResult(${idx})" 
+                     id="photo-card-${idx}" 
+                     class="group cursor-pointer rounded-xl overflow-hidden border-2 transition relative aspect-square bg-slate-100 shadow-sm hover:shadow-md ${isSelected ? 'border-emerald-600 ring-2 ring-emerald-500/40' : 'border-slate-200 hover:border-emerald-400'}">
+                    <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.title)}" loading="lazy" class="w-full h-full object-cover transition group-hover:scale-105 duration-200">
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent p-1.5 pt-4 text-white">
+                        <p class="text-[10px] font-medium leading-tight line-clamp-1">${escapeHtml(item.title)}</p>
+                    </div>
+                    <div class="photo-check-badge absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] shadow-sm ${isSelected ? '' : 'hidden'}">
+                        ✓
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        grid.innerHTML = `<p class="col-span-full text-rose-500 text-center py-6 text-xs">${escapeHtml(e.message || 'Error al conectar con el buscador de fotos.')}</p>`;
+    } finally {
+        if (btn) btn.disabled = false;
+        safeCreateIcons();
+    }
+}
+
+function selectPhotoResult(index) {
+    const item = currentPhotoResults[index];
+    if (!item) return;
+
+    const preview = document.getElementById('edit-photo-preview');
+    if (preview) preview.src = item.url;
+
+    const urlInput = document.getElementById('edit-photo-url-input');
+    if (urlInput) urlInput.value = item.url;
+
+    const selectedLabel = document.getElementById('edit-photo-selected-label');
+    if (selectedLabel) selectedLabel.textContent = item.title;
+
+    editPhotoSelectedFile = null;
+    const fileInput = document.getElementById('edit-photo-file-input');
+    if (fileInput) fileInput.value = '';
+
+    document.querySelectorAll('#photo-search-results-grid > div').forEach((el, idx) => {
+        const badge = el.querySelector('.photo-check-badge');
+        if (idx === index) {
+            el.className = 'group cursor-pointer rounded-xl overflow-hidden border-2 transition relative aspect-square bg-slate-100 shadow-md border-emerald-600 ring-2 ring-emerald-500/40';
+            if (badge) badge.classList.remove('hidden');
+        } else {
+            el.className = 'group cursor-pointer rounded-xl overflow-hidden border-2 transition relative aspect-square bg-slate-100 shadow-sm hover:shadow-md border-slate-200 hover:border-emerald-400';
+            if (badge) badge.classList.add('hidden');
+        }
+    });
+}
+
+async function generateAiRecipePhoto() {
+    const recipeId = document.getElementById('edit-photo-recipe-id')?.value;
+    const btn = document.getElementById('btn-generate-ai-photo');
+    const statusMsg = document.getElementById('photo-ai-status-msg');
+    if (!recipeId) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block animate-spin mr-1.5">✨</span> Creando con Gemini IA...';
+    }
+    if (statusMsg) {
+        statusMsg.classList.remove('hidden');
+        statusMsg.className = 'text-center text-xs p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 leading-relaxed';
+        statusMsg.innerHTML = '🎨 <strong>Gemini IA está generando tu fotografía culinaria...</strong><br><span class="text-[11px] text-amber-700">Esto suele tomar unos 5-10 segundos.</span>';
+    }
+
+    try {
+        const resp = await fetch(`/api/recipes/${recipeId}/generate-image`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.detail || 'Error al generar la imagen con IA.');
+        }
+
+        const newImageUrl = data.image_url;
+        const preview = document.getElementById('edit-photo-preview');
+        if (preview) preview.src = newImageUrl;
+
+        const urlInput = document.getElementById('edit-photo-url-input');
+        if (urlInput) urlInput.value = newImageUrl;
+
+        const selectedLabel = document.getElementById('edit-photo-selected-label');
+        if (selectedLabel) selectedLabel.textContent = '✨ Generada con Gemini IA';
+
+        if (statusMsg) {
+            statusMsg.className = 'text-center text-xs p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 leading-relaxed';
+            statusMsg.innerHTML = '✅ <strong>¡Fotografía generada con éxito!</strong> Revisa la vista previa y pulsa "Guardar Foto".';
+        }
+
+        const idx = savedRecipes.findIndex(r => r.id === recipeId);
+        if (idx !== -1) savedRecipes[idx].image_url = newImageUrl;
+        if (currentAnalysisRecipe && currentAnalysisRecipe.id === recipeId) {
+            currentAnalysisRecipe.image_url = newImageUrl;
+        }
+        renderRecipesGrid();
+    } catch (e) {
+        if (statusMsg) {
+            statusMsg.className = 'text-left text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 leading-relaxed';
+            statusMsg.innerHTML = `⚠️ <strong>Aviso:</strong> ${escapeHtml(e.message)}<br><span class="block mt-1 text-[11px] text-slate-600">💡 Te recomendamos usar la pestaña <strong>"Buscar Fotos"</strong> para elegir una foto real instantánea.</span>`;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-1"></i><span>Crear Foto con Gemini IA</span>';
+            safeCreateIcons();
+        }
+    }
 }
 
 function handleRecipePhotoFileSelected(event) {
@@ -1027,6 +1222,8 @@ function handleRecipePhotoFileSelected(event) {
         reader.onload = (e) => {
             const preview = document.getElementById('edit-photo-preview');
             if (preview) preview.src = e.target.result;
+            const selectedLabel = document.getElementById('edit-photo-selected-label');
+            if (selectedLabel) selectedLabel.textContent = `Archivo: ${file.name}`;
         };
         reader.readAsDataURL(file);
     }
@@ -1036,6 +1233,8 @@ function handleRecipePhotoUrlInput(url) {
     if (url && url.trim().length > 6) {
         const preview = document.getElementById('edit-photo-preview');
         if (preview) preview.src = url.trim();
+        const selectedLabel = document.getElementById('edit-photo-selected-label');
+        if (selectedLabel) selectedLabel.textContent = 'Enlace web introducido';
         editPhotoSelectedFile = null;
         const fileInput = document.getElementById('edit-photo-file-input');
         if (fileInput) fileInput.value = '';
@@ -1048,7 +1247,7 @@ async function saveRecipePhoto() {
     if (!recipeId) return;
 
     if (!editPhotoSelectedFile && !urlVal) {
-        alert('Por favor, selecciona una foto de tu dispositivo o pega un enlace de imagen.');
+        alert('Por favor, selecciona una foto de las sugerencias, de tu dispositivo o pega un enlace de imagen.');
         return;
     }
 

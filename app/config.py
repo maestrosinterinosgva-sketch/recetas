@@ -8,6 +8,9 @@ ENV_FILE = BASE_DIR / ".env"
 # Load environment variables from .env
 load_dotenv(ENV_FILE)
 
+UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
 def get_gemini_api_key() -> str:
     """Obtiene la clave de API de Gemini configurada."""
     return os.environ.get("GEMINI_API_KEY", "").strip()

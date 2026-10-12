@@ -32,7 +32,9 @@ from app.gemini_service import (
     compare_recipes_nutrition,
     estimate_food_nutrition,
     suggest_recipe_from_pantry,
-    optimize_image_bytes
+    optimize_image_bytes,
+    search_culinary_photos,
+    generate_recipe_image_ai
 )
 from app.media_service import download_social_video_or_info, cleanup_file
 
@@ -107,6 +109,11 @@ async def save_config(payload: ApiKeyPayload):
 async def api_get_recipes():
     return list_recipes()
 
+@app.get("/api/recipes/search-images")
+async def api_search_recipe_images(q: str = ""):
+    results = search_culinary_photos(q, limit=8)
+    return {"results": results}
+
 @app.get("/api/recipes/{recipe_id}")
 async def api_get_recipe(recipe_id: str):
     recipe = get_recipe(recipe_id)
@@ -153,6 +160,22 @@ async def api_update_recipe_image(
     if not new_image_url:
         raise HTTPException(status_code=400, detail="Debes proporcionar un archivo de imagen o una URL válida.")
         
+    recipe["image_url"] = new_image_url
+    saved = save_recipe(recipe)
+    return {"success": True, "image_url": new_image_url, "recipe": saved}
+
+@app.post("/api/recipes/{recipe_id}/generate-image")
+async def api_generate_recipe_image(recipe_id: str):
+    recipe = get_recipe(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+    
+    title = recipe.get("title", "")
+    res = generate_recipe_image_ai(title)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Error generando imagen con IA."))
+    
+    new_image_url = res["image_url"]
     recipe["image_url"] = new_image_url
     saved = save_recipe(recipe)
     return {"success": True, "image_url": new_image_url, "recipe": saved}

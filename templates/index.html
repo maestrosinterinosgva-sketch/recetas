@@ -971,56 +971,132 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
     </div>
 
     <!-- Modal: Modificar Foto de Receta -->
-    <div id="edit-photo-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                        <i data-lucide="camera" class="w-4 h-4"></i>
+    <div id="edit-photo-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white w-full max-w-xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm">
+                        <i data-lucide="image" class="w-5 h-5"></i>
                     </div>
-                    <h3 class="text-base font-bold text-slate-800">Cambiar Foto de la Receta</h3>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Cambiar Foto de la Receta</h3>
+                        <p id="edit-photo-recipe-title" class="text-xs text-slate-500 font-medium line-clamp-1"></p>
+                    </div>
                 </div>
-                <button onclick="closeEditPhotoModal()" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+                <button onclick="closeEditPhotoModal()" class="w-8 h-8 rounded-full hover:bg-slate-200/70 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <input type="hidden" id="edit-photo-recipe-id">
-            <p id="edit-photo-recipe-title" class="text-xs font-bold text-slate-700 line-clamp-1"></p>
+            <!-- Body con scroll -->
+            <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-700 flex-1">
+                <input type="hidden" id="edit-photo-recipe-id">
 
-            <!-- Previsualización actual -->
-            <div class="space-y-1.5">
-                <label class="block text-xs font-semibold text-slate-500">Vista previa:</label>
-                <div class="w-full h-44 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative">
-                    <img id="edit-photo-preview" src="" alt="Previsualización" class="w-full h-full object-cover">
+                <!-- Vista previa actual -->
+                <div class="flex items-center space-x-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-slate-200 border border-slate-300/70 flex-shrink-0 relative">
+                        <img id="edit-photo-preview" src="" alt="Previsualización" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 space-y-1">
+                        <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Foto Seleccionada</span>
+                        <p class="text-xs font-semibold text-slate-800 line-clamp-2" id="edit-photo-selected-label">Vista previa actual</p>
+                        <p class="text-[11px] text-slate-400">Esta imagen se guardará como la foto principal del plato.</p>
+                    </div>
+                </div>
+
+                <!-- Selector de Pestañas de Cambio de Foto -->
+                <div class="flex flex-wrap border-b border-slate-200 gap-1 pb-1 text-xs">
+                    <button type="button" onclick="switchEditPhotoTab('search')" id="tab-btn-photo-search" class="px-3 py-2 font-bold rounded-xl transition text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center space-x-1.5">
+                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                        <span>Buscar Fotos</span>
+                    </button>
+                    <button type="button" onclick="switchEditPhotoTab('ai')" id="tab-btn-photo-ai" class="px-3 py-2 font-semibold rounded-xl transition text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center space-x-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+                        <span>Generar con IA</span>
+                    </button>
+                    <button type="button" onclick="switchEditPhotoTab('upload')" id="tab-btn-photo-upload" class="px-3 py-2 font-semibold rounded-xl transition text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center space-x-1.5">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>Subir / Cámara</span>
+                    </button>
+                    <button type="button" onclick="switchEditPhotoTab('url')" id="tab-btn-photo-url" class="px-3 py-2 font-semibold rounded-xl transition text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center space-x-1.5">
+                        <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                        <span>Pegar Enlace</span>
+                    </button>
+                </div>
+
+                <!-- Panel 1: Buscar Fotos Online (Automático & Personalizado) -->
+                <div id="photo-tab-panel-search" class="space-y-3">
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="photo-search-input" placeholder="Buscar plato (ej: tortitas con plátano, crepes chocolate...)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchPhotosModal();}" class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-white">
+                        </div>
+                        <button type="button" onclick="searchPhotosModal()" id="btn-photo-search-action" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center space-x-1.5 transition flex-shrink-0">
+                            <span>Buscar</span>
+                        </button>
+                    </div>
+
+                    <!-- Galería de Miniaturas de Resultados -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Opciones encontradas:</span>
+                            <span class="text-[11px] text-slate-400">Toca una foto para seleccionarla</span>
+                        </div>
+                        <div id="photo-search-results-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 min-h-[140px]">
+                            <!-- Rellenado dinámicamente con fotos -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 2: Generar con IA (Gemini) -->
+                <div id="photo-tab-panel-ai" class="hidden p-4 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-3">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs">Generación Fotorrealista con IA</h4>
+                            <p class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                                Google Gemini diseñará una fotografía gastronómica de estudio para el plato: 
+                                <strong id="edit-photo-ai-dish-name" class="text-emerald-950 font-bold"></strong>.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="pt-2 flex justify-center">
+                        <button type="button" onclick="generateAiRecipePhoto()" id="btn-generate-ai-photo" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-sm flex items-center justify-center space-x-2 transition">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Crear Foto con Gemini IA</span>
+                        </button>
+                    </div>
+                    <div id="photo-ai-status-msg" class="hidden text-center text-xs p-3 rounded-xl bg-white border border-amber-200 text-slate-700 leading-relaxed"></div>
+                </div>
+
+                <!-- Panel 3: Subir archivo o cámara -->
+                <div id="photo-tab-panel-upload" class="hidden p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                        <i data-lucide="upload" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Selecciona una foto desde tu móvil o PC:</span>
+                    </span>
+                    <input type="file" id="edit-photo-file-input" accept="image/*" onchange="handleRecipePhotoFileSelected(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer">
+                    <p class="text-[11px] text-slate-400">En el móvil puedes elegir la cámara para tomar una foto del plato terminado.</p>
+                </div>
+
+                <!-- Panel 4: Enlace URL -->
+                <div id="photo-tab-panel-url" class="hidden p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                        <i data-lucide="link" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Pega un enlace web directo de la imagen:</span>
+                    </span>
+                    <input type="url" id="edit-photo-url-input" oninput="handleRecipePhotoUrlInput(this.value)" placeholder="https://ejemplo.com/foto-receta.jpg" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs outline-none bg-white focus:ring-2 focus:ring-emerald-500">
                 </div>
             </div>
 
-            <!-- Opciones para cambiar -->
-            <div class="space-y-3">
-                <!-- Opción 1: Subir archivo o cámara del móvil -->
-                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1">
-                        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i>
-                        <span>Opción A: Subir foto o hacer foto con la cámara</span>
-                    </span>
-                    <input type="file" id="edit-photo-file-input" accept="image/*" onchange="handleRecipePhotoFileSelected(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer">
-                </div>
-
-                <!-- Opción 2: Enlace URL -->
-                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                    <span class="text-xs font-bold text-slate-700 flex items-center space-x-1">
-                        <i data-lucide="link" class="w-3.5 h-3.5 text-emerald-600"></i>
-                        <span>Opción B: Pegar enlace o URL de internet</span>
-                    </span>
-                    <input type="url" id="edit-photo-url-input" oninput="handleRecipePhotoUrlInput(this.value)" placeholder="https://ejemplo.com/foto-receta.jpg" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-white">
-                </div>
-            </div>
-
-            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="closeEditPhotoModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                <button type="button" onclick="saveRecipePhoto()" id="btn-save-recipe-photo" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
-                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
+                <button type="button" onclick="closeEditPhotoModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition">Cancelar</button>
+                <button type="button" onclick="saveRecipePhoto()" id="btn-save-recipe-photo" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition flex items-center space-x-1.5">
+                    <i data-lucide="check" class="w-4 h-4"></i>
                     <span>Guardar Foto</span>
                 </button>
             </div>

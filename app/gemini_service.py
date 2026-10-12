@@ -3,11 +3,15 @@ import re
 import json
 import time
 import logging
+import uuid
+import base64
+import urllib.request
+import urllib.parse
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
 
-from app.config import get_gemini_api_key
+from app.config import get_gemini_api_key, UPLOADS_DIR
 from app.models import (
     Recipe, ComparisonResult, SuggestionRequest, SuggestionResponse, 
     NutrientInfo, Ingredient, CustomFood, PantryRecipeRequest
@@ -32,21 +36,37 @@ def extract_clean_recipe_title(title: str, description: str, source: str = "Red 
     return clean_title if clean_title else f"Receta de {source}"
 
 CULINARY_IMAGE_KEYWORDS = [
+    # Categorías específicas de desayunos y repostería primero (evitar que 'avena' o 'fruta' capture tortitas o crepes)
+    (["tortita", "pancake", "panqueque", "hotcake"], "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=700&auto=format&fit=crop&q=80"),
+    (["crepe", "crepes"], "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=700&auto=format&fit=crop&q=80"),
+    (["gofre", "waffle"], "https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=700&auto=format&fit=crop&q=80"),
+    (["banana bread", "pan de plátano", "pan de platano"], "https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=700&auto=format&fit=crop&q=80"),
+    (["donut", "dona", "rosquilla"], "https://images.unsplash.com/photo-1527515862127-a4fc05baf7a5?w=700&auto=format&fit=crop&q=80"),
+    (["biscotti", "galleta", "cookie"], "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=700&auto=format&fit=crop&q=80"),
+    (["sandwich", "sándwich", "tosta", "tostada", "bocadillo"], "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=700&auto=format&fit=crop&q=80"),
+    (["empanada", "empanadilla"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
+    (["quiche", "tarta salada"], "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=700&auto=format&fit=crop&q=80"),
+    (["falafel", "faláfel"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
+    (["coliflor"], "https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?w=700&auto=format&fit=crop&q=80"),
+    (["maki", "sushi"], "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=700&auto=format&fit=crop&q=80"),
+    (["berenjena"], "https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=700&auto=format&fit=crop&q=80"),
+    (["helado", "sorbete", "polo", "polos"], "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?w=700&auto=format&fit=crop&q=80"),
+    (["nugget", "nuggets"], "https://images.unsplash.com/photo-1562967914-608f82629710?w=700&auto=format&fit=crop&q=80"),
     (["salmon", "salmón"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
     (["carbonara", "spaghetti", "espagueti", "pasta", "macarron", "tallarin", "lasaña", "lasagna"], "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=700&auto=format&fit=crop&q=80"),
     (["curry", "tikka"], "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=700&auto=format&fit=crop&q=80"),
     (["pollo", "pechuga", "pavo"], "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=700&auto=format&fit=crop&q=80"),
-    (["ensalada", "salad"], "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&auto=format&fit=crop&q=80"),
+    (["ensalada", "salad", "xató", "xato"], "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&auto=format&fit=crop&q=80"),
     (["poke", "bowl"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
     (["lubina", "merluza", "bacalao", "pescado", "atun", "atún", "pulpo", "calamar", "marisco", "gamba"], "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=700&auto=format&fit=crop&q=80"),
-    (["crema", "sopa", "pure", "puré", "gazpacho", "calabaza"], "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=700&auto=format&fit=crop&q=80"),
+    (["crema", "sopa", "pure", "puré", "gazpacho", "salmorejo", "calabaza"], "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=700&auto=format&fit=crop&q=80"),
     (["tortilla", "huevo", "revuelto", "frittata", "omelet"], "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=700&auto=format&fit=crop&q=80"),
-    (["albondiga", "albóndiga", "hamburguesa", "burger", "carne", "ternera", "bife", "solomillo"], "https://images.unsplash.com/photo-1529042410759-befb1204b468?w=700&auto=format&fit=crop&q=80"),
+    (["albondiga", "albóndiga", "hamburguesa", "burger", "carne", "ternera", "bife", "solomillo", "lomo"], "https://images.unsplash.com/photo-1529042410759-befb1204b468?w=700&auto=format&fit=crop&q=80"),
     (["arroz", "paella", "risotto", "basmati"], "https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=700&auto=format&fit=crop&q=80"),
     (["lenteja", "garbanzo", "alubia", "judia", "judía", "hummus", "legumbre"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
     (["wrap", "fajita", "burrito", "taco", "quesadilla"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
     (["pizza", "focaccia"], "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&auto=format&fit=crop&q=80"),
-    (["cake", "tarta", "pastel", "bizcocho", "brownie", "postre", "dulce", "galleta"], "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=700&auto=format&fit=crop&q=80"),
+    (["cake", "tarta", "pastel", "bizcocho", "brownie", "postre", "dulce"], "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=700&auto=format&fit=crop&q=80"),
     (["smoothie", "batido", "avena", "porridge", "yogur", "fruta", "desayuno"], "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&auto=format&fit=crop&q=80")
 ]
 DEFAULT_CULINARY_IMAGE = "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=700&auto=format&fit=crop&q=80"
@@ -58,6 +78,143 @@ def get_culinary_image_for_title(title: str) -> str:
         if any(k in lower for k in keywords):
             return url
     return DEFAULT_CULINARY_IMAGE
+
+def search_culinary_photos(query: str, limit: int = 8) -> List[Dict[str, str]]:
+    """Busca fotografías culinarias de calidad combinando colecciones gastronómicas curadas y Wikimedia Commons."""
+    results = []
+    seen_urls = set()
+    clean_q = (query or "").strip()
+    if not clean_q:
+        return results
+
+    def add_img(title: str, url: str, source: str = "curated"):
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            results.append({
+                "title": title,
+                "url": url,
+                "source": source
+            })
+
+    lower_q = clean_q.lower()
+
+    # 1. Coincidencia en catálogo curado HD (tomamos la más específica)
+    for keywords, url in CULINARY_IMAGE_KEYWORDS:
+        if any(k in lower_q for k in keywords):
+            tag = keywords[0].capitalize()
+            add_img(f"Foto HD recomendada ({tag})", url, "curated")
+            break
+
+    # 2. Búsqueda en Wikimedia Commons
+    TRANSLATIONS = [
+        ("tortitas", "pancakes"), ("tortita", "pancake"), ("panqueques", "pancakes"),
+        ("platano", "banana"), ("plátano", "banana"),
+        ("avena", "oatmeal"), ("manzana", "apple"),
+        ("chocolate", "chocolate"), ("fresas", "strawberries"),
+        ("ensalada", "salad"), ("pollo", "chicken"),
+        ("lentejas", "lentils"), ("arroz", "rice"),
+        ("galletas", "cookies"), ("bizcocho", "cake"),
+        ("sopa", "soup"), ("crema", "soup"),
+        ("pescado", "fish"), ("salmon", "salmon"), ("salmón", "salmon")
+    ]
+    eng_q = lower_q
+    for es, en in TRANSLATIONS:
+        eng_q = eng_q.replace(es, en)
+
+    search_terms = []
+    # Generar frases clave en inglés y términos específicos
+    if "pancake" in eng_q or "tortita" in lower_q:
+        if "banana" in eng_q:
+            search_terms.append("banana pancakes")
+        search_terms.append("pancakes")
+    elif "crepe" in eng_q:
+        search_terms.append("crepes")
+    elif "waffle" in eng_q or "gofre" in lower_q:
+        search_terms.append("waffles")
+    elif "falafel" in eng_q:
+        search_terms.append("falafel")
+    elif "hummus" in eng_q:
+        search_terms.append("hummus")
+
+    if eng_q not in search_terms:
+        search_terms.append(eng_q)
+    if clean_q not in search_terms:
+        search_terms.append(clean_q)
+
+    for term in search_terms:
+        if len(results) >= limit:
+            break
+        try:
+            params = {
+                "action": "query",
+                "generator": "search",
+                "gsrnamespace": "6",
+                "gsrsearch": f"{term} filetype:bitmap",
+                "gsrlimit": str(min(6, limit - len(results) + 2)),
+                "prop": "imageinfo",
+                "iiprop": "url",
+                "iiurlwidth": "700",
+                "format": "json"
+            }
+            url = f"https://commons.wikimedia.org/w/api.php?{urllib.parse.urlencode(params)}"
+            req = urllib.request.Request(url, headers={"User-Agent": "RecetasNutriApp/1.0 (culinary-assistant)"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                pages = data.get("query", {}).get("pages", {})
+                for p in pages.values():
+                    info = p.get("imageinfo", [{}])[0]
+                    thumb = info.get("thumburl") or info.get("url")
+                    title = p.get("title", "").replace("File:", "").rsplit(".", 1)[0]
+                    title = title.replace("_", " ")[:60]
+                    if thumb and any(thumb.lower().endswith(ext) or ext in thumb.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                        add_img(title, thumb, "wikimedia")
+        except Exception as e:
+            logger.warning(f"Error buscando en Wikimedia para '{term}': {e}")
+
+    # Fallback si no hubo resultados
+    if not results:
+        add_img("Plato gastronómico", DEFAULT_CULINARY_IMAGE, "curated")
+
+    return results[:limit]
+
+def generate_recipe_image_ai(recipe_title: str) -> Dict[str, Any]:
+    """Intenta generar una fotografía gastronómica con Google Gemini (requiere cuenta con cuota de generación)."""
+    client = get_client()
+    if not client:
+        return {"success": False, "error": "No hay clave API de Gemini configurada."}
+
+    prompt = f"Professional appetizing culinary studio photograph of {recipe_title}. Gourmet presentation on a clean ceramic plate, warm natural restaurant lighting, high resolution, delicious food photography."
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-image",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"]
+            )
+        )
+        for part in response.parts:
+            if part.inline_data:
+                img_data = part.inline_data.data
+                ext = ".jpg" if "jpeg" in (part.inline_data.mime_type or "") else ".png"
+                img_name = f"ai_gen_{uuid.uuid4().hex[:8]}{ext}"
+                img_path = UPLOADS_DIR / img_name
+                if isinstance(img_data, str):
+                    raw_bytes = base64.b64decode(img_data)
+                else:
+                    raw_bytes = img_data
+                with open(img_path, "wb") as f:
+                    f.write(raw_bytes)
+                return {"success": True, "image_url": f"/uploads/{img_name}"}
+        return {"success": False, "error": "El modelo no generó una imagen en la respuesta."}
+    except Exception as e:
+        err_msg = str(e)
+        logger.warning(f"Error generando imagen con IA: {e}")
+        if "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+            return {
+                "success": False,
+                "error": "Tu cuenta de Gemini API no tiene cuota activa para generación de imágenes (requiere plan de pago en Google AI Studio). Te recomendamos usar la pestaña 'Buscar Foto' para obtener fotos reales instantáneas."
+            }
+        return {"success": False, "error": f"Error al generar con IA: {err_msg[:120]}"}
 
 RECIPE_ANALYSIS_SYSTEM_PROMPT = """Eres un Nutricionista Clínico y Chef Profesional experto en análisis bromatológico y cálculo nutricional de recetas.
 Tu misión es analizar la receta proporcionada (a través de texto, imágenes de platos o ingredientes, o vídeos de cocina) y desglosarla con máxima precisión:
