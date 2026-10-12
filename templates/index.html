@@ -923,12 +923,8 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
                     </h2>
                     <p class="text-sm text-slate-500 mt-0.5">Colección de recetas analizadas, comparadas y personalizadas.</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="recipe-search" oninput="filterRecipesList()" placeholder="Buscar por nombre o ingrediente..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-60 bg-white">
-                    <button type="button" onclick="triggerAutoFixPhotos()" id="btn-auto-fix-photos" class="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Revisa todas las recetas y asigna fotos culinarias HD automáticamente">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-600"></i>
-                        <span>Auto-corregir Fotos</span>
-                    </button>
+                <div class="flex items-center space-x-3">
+                    <input type="text" id="recipe-search" oninput="filterRecipesList()" placeholder="Buscar por nombre o ingrediente..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-64 bg-white">
                 </div>
             </div>
 
@@ -1238,6 +1234,6 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/app.js?v=2.4"></script>
+    <script src="/static/js/app.js?v=2.5"></script>
 </body>
 </html>
