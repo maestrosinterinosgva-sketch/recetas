@@ -1164,19 +1164,19 @@ async function generateAiRecipePhoto() {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="inline-block animate-spin mr-1.5">✨</span> Creando con Gemini IA...';
+        btn.innerHTML = '<span class="inline-block animate-spin mr-1.5">✨</span> Consultando a Gemini IA...';
     }
     if (statusMsg) {
         statusMsg.classList.remove('hidden');
         statusMsg.className = 'text-center text-xs p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 leading-relaxed';
-        statusMsg.innerHTML = '🎨 <strong>Gemini IA está generando tu fotografía culinaria...</strong><br><span class="text-[11px] text-amber-700">Esto suele tomar unos 5-10 segundos.</span>';
+        statusMsg.innerHTML = '🎨 <strong>Gemini IA está analizando los ingredientes y buscando la mejor foto...</strong>';
     }
 
     try {
         const resp = await fetch(`/api/recipes/${recipeId}/generate-image`, { method: 'POST' });
         const data = await resp.json();
         if (!resp.ok) {
-            throw new Error(data.detail || 'Error al generar la imagen con IA.');
+            throw new Error(data.detail || 'Error al procesar la imagen con IA.');
         }
 
         const newImageUrl = data.image_url;
@@ -1187,12 +1187,16 @@ async function generateAiRecipePhoto() {
         if (urlInput) urlInput.value = newImageUrl;
 
         const selectedLabel = document.getElementById('edit-photo-selected-label');
-        if (selectedLabel) selectedLabel.textContent = '✨ Generada con Gemini IA';
+        if (selectedLabel) selectedLabel.textContent = '✨ Seleccionada por Gemini IA';
 
         if (statusMsg) {
             statusMsg.className = 'text-center text-xs p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 leading-relaxed';
-            statusMsg.innerHTML = '✅ <strong>¡Fotografía generada con éxito!</strong> Revisa la vista previa y pulsa "Guardar Foto".';
+            statusMsg.innerHTML = '✅ <strong>¡Fotografía asignada con éxito por Gemini IA!</strong> Hemos actualizado la vista previa. Pulsa "Guardar Foto" para confirmar.';
         }
+
+        // Desplazar suavemente hacia arriba para que el usuario vea la foto inmediatamente
+        const scrollArea = document.querySelector('#edit-photo-modal .overflow-y-auto');
+        if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
 
         const idx = savedRecipes.findIndex(r => r.id === recipeId);
         if (idx !== -1) savedRecipes[idx].image_url = newImageUrl;
@@ -1203,12 +1207,12 @@ async function generateAiRecipePhoto() {
     } catch (e) {
         if (statusMsg) {
             statusMsg.className = 'text-left text-xs p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 leading-relaxed';
-            statusMsg.innerHTML = `⚠️ <strong>Aviso:</strong> ${escapeHtml(e.message)}<br><span class="block mt-1 text-[11px] text-slate-600">💡 Te recomendamos usar la pestaña <strong>"Buscar Fotos"</strong> para elegir una foto real instantánea.</span>`;
+            statusMsg.innerHTML = `⚠️ <strong>Aviso:</strong> ${escapeHtml(e.message)}<br><span class="block mt-1 text-[11px] text-slate-600">💡 También puedes usar la pestaña <strong>"Buscar Fotos"</strong> para elegir una foto real en la galería.</span>`;
         }
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-1"></i><span>Crear Foto con Gemini IA</span>';
+            btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-1"></i><span>Asignar Foto con Gemini IA</span>';
             safeCreateIcons();
         }
     }

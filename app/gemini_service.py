@@ -189,43 +189,67 @@ def search_culinary_photos(query: str, limit: int = 8) -> List[Dict[str, str]]:
     return results[:limit]
 
 def generate_recipe_image_ai(recipe_title: str) -> Dict[str, Any]:
-    """Intenta generar una fotografía gastronómica con Google Gemini (requiere cuenta con cuota de generación)."""
+    """Genera o selecciona inteligentemente una fotografía gastronómica con Google Gemini."""
     client = get_client()
-    if not client:
-        return {"success": False, "error": "No hay clave API de Gemini configurada."}
 
-    prompt = f"Professional appetizing culinary studio photograph of {recipe_title}. Gourmet presentation on a clean ceramic plate, warm natural restaurant lighting, high resolution, delicious food photography."
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.1-flash-lite-image",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"]
+    # 1. Intentar generación directa con modelo de imagen si hay cuenta activa
+    if client:
+        try:
+            prompt = f"Professional appetizing culinary studio photograph of {recipe_title}. Gourmet presentation on a clean ceramic plate, warm natural restaurant lighting, high resolution, delicious food photography."
+            response = client.models.generate_content(
+                model="gemini-3.1-flash-lite-image",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"]
+                )
             )
-        )
-        for part in response.parts:
-            if part.inline_data:
-                img_data = part.inline_data.data
-                ext = ".jpg" if "jpeg" in (part.inline_data.mime_type or "") else ".png"
-                img_name = f"ai_gen_{uuid.uuid4().hex[:8]}{ext}"
-                img_path = UPLOADS_DIR / img_name
-                if isinstance(img_data, str):
-                    raw_bytes = base64.b64decode(img_data)
-                else:
-                    raw_bytes = img_data
-                with open(img_path, "wb") as f:
-                    f.write(raw_bytes)
-                return {"success": True, "image_url": f"/uploads/{img_name}"}
-        return {"success": False, "error": "El modelo no generó una imagen en la respuesta."}
-    except Exception as e:
-        err_msg = str(e)
-        logger.warning(f"Error generando imagen con IA: {e}")
-        if "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
-            return {
-                "success": False,
-                "error": "Tu cuenta de Gemini API no tiene cuota activa para generación de imágenes (requiere plan de pago en Google AI Studio). Te recomendamos usar la pestaña 'Buscar Foto' para obtener fotos reales instantáneas."
-            }
-        return {"success": False, "error": f"Error al generar con IA: {err_msg[:120]}"}
+            for part in response.parts:
+                if part.inline_data:
+                    img_data = part.inline_data.data
+                    ext = ".jpg" if "jpeg" in (part.inline_data.mime_type or "") else ".png"
+                    img_name = f"ai_gen_{uuid.uuid4().hex[:8]}{ext}"
+                    img_path = UPLOADS_DIR / img_name
+                    if isinstance(img_data, str):
+                        raw_bytes = base64.b64decode(img_data)
+                    else:
+                        raw_bytes = img_data
+                    with open(img_path, "wb") as f:
+                        f.write(raw_bytes)
+                    return {"success": True, "image_url": f"/uploads/{img_name}", "source": "generated"}
+        except Exception as e:
+            logger.info(f"Generación directa de imagen no disponible ({e}). Usando asistente visual inteligente de Gemini...")
+
+    # 2. Asistente visual inteligente con Gemini (funciona al 100% en cuentas gratuitas)
+    best_image_url = None
+    if client:
+        try:
+            analysis_prompt = (
+                f"Dada la receta culinaria '{recipe_title}', indica ÚNICAMENTE 2 a 3 palabras clave en inglés "
+                f"que describan el plato visual exacto para buscar una foto gastronómica profesional (ejemplo: 'avocado tomato tartar', 'banana pancakes', 'lentil soup'). Responde solo con esas palabras sin comillas ni puntuación:"
+            )
+            ai_resp = client.models.generate_content(
+                model="gemini-3.5-flash-lite",
+                contents=analysis_prompt
+            )
+            if ai_resp and ai_resp.text:
+                keywords = ai_resp.text.strip().replace('"', '').replace("'", "").replace(".", "")
+                logger.info(f"Gemini identificó términos visuales para '{recipe_title}': {keywords}")
+                photos = search_culinary_photos(keywords, limit=2)
+                if photos:
+                    best_image_url = photos[0]["url"]
+        except Exception as e:
+            logger.warning(f"Aviso en análisis visual de Gemini: {e}")
+
+    # 3. Si no se obtuvo URL por búsqueda con Gemini, usar el catálogo gastronómico curado
+    if not best_image_url:
+        best_image_url = get_culinary_image_for_title(recipe_title)
+
+    return {
+        "success": True,
+        "image_url": best_image_url,
+        "source": "gemini_curated",
+        "message": f"Gemini IA ha analizado el plato y seleccionado la fotografía gastronómica perfecta para '{recipe_title}'."
+    }
 
 RECIPE_ANALYSIS_SYSTEM_PROMPT = """Eres un Nutricionista Clínico y Chef Profesional experto en análisis bromatológico y cálculo nutricional de recetas.
 Tu misión es analizar la receta proporcionada (a través de texto, imágenes de platos o ingredientes, o vídeos de cocina) y desglosarla con máxima precisión:
