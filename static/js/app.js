@@ -12,8 +12,10 @@ let currentCategoryFilter = 'all';
 const CATEGORY_META = {
     'desayuno': { label: 'Desayuno', icon: '🌅', color: 'bg-amber-100 text-amber-800 border-amber-200' },
     'comida': { label: 'Comida', icon: '🍽️', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-    'merienda-postre': { label: 'Merienda / Postre', icon: '☕', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-    'cena': { label: 'Cena', icon: '🌙', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' }
+    'merienda': { label: 'Merienda', icon: '☕', color: 'bg-orange-100 text-orange-800 border-orange-200' },
+    'cena': { label: 'Cena', icon: '🌙', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+    'postre': { label: 'Postre', icon: '🍰', color: 'bg-pink-100 text-pink-800 border-pink-200' },
+    'merienda-postre': { label: 'Merienda / Postre', icon: '☕', color: 'bg-purple-100 text-purple-800 border-purple-200' }
 };
 
 // Custom Foods State
@@ -709,14 +711,17 @@ function updateCategoryFilterCounts() {
         'all': savedRecipes.length,
         'desayuno': 0,
         'comida': 0,
-        'merienda-postre': 0,
-        'cena': 0
+        'merienda': 0,
+        'cena': 0,
+        'postre': 0
     };
 
     savedRecipes.forEach(r => {
         const cat = (r.category || 'comida').toLowerCase();
         if (counts[cat] !== undefined) {
             counts[cat]++;
+        } else if (cat === 'merienda-postre') {
+            counts['merienda']++;
         } else {
             counts['comida']++;
         }
@@ -730,7 +735,7 @@ function updateCategoryFilterCounts() {
 
 function setCategoryFilter(category) {
     currentCategoryFilter = category;
-    const cats = ['all', 'desayuno', 'comida', 'merienda-postre', 'cena'];
+    const cats = ['all', 'desayuno', 'comida', 'merienda', 'cena', 'postre'];
     cats.forEach(c => {
         const btn = document.getElementById(`cat-btn-${c}`);
         const countSpan = document.getElementById(`cat-count-${c}`);
@@ -926,9 +931,17 @@ function openRecipeModal(recipeId) {
 
         <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${catMeta.color}">
-                    ${catMeta.icon} ${catMeta.label}
-                </span>
+                <div class="inline-flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200">
+                    <span class="text-[11px] font-semibold text-slate-500">Momento:</span>
+                    <select onchange="updateRecipeCategory('${recipe.id}', this.value)" class="text-xs font-bold py-0.5 px-2 rounded-lg border outline-none cursor-pointer transition ${catMeta.color}">
+                        <option value="desayuno" ${catKey === 'desayuno' ? 'selected' : ''}>🌅 Desayuno</option>
+                        <option value="comida" ${catKey === 'comida' ? 'selected' : ''}>🍽️ Comida</option>
+                        <option value="merienda" ${catKey === 'merienda' ? 'selected' : ''}>☕ Merienda</option>
+                        <option value="cena" ${catKey === 'cena' ? 'selected' : ''}>🌙 Cena</option>
+                        <option value="postre" ${catKey === 'postre' ? 'selected' : ''}>🍰 Postre</option>
+                    </select>
+                    <span id="cat-saved-check-${recipe.id}" class="hidden text-emerald-600 text-[11px] font-bold">✓ Guardado</span>
+                </div>
                 <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                     ${recipe.servings || 1} ${recipe.servings > 1 ? 'raciones' : 'ración'} (~${weight.perServingG}g / ración)
                 </span>
@@ -984,6 +997,67 @@ function openRecipeModal(recipeId) {
 
 function closeRecipeModal() {
     document.getElementById('recipe-modal').classList.add('hidden');
+}
+
+async function updateRecipeCategory(recipeId, newCat) {
+    try {
+        const resp = await fetch(`/api/recipes/${recipeId}/category`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: newCat })
+        });
+        if (!resp.ok) {
+            const errData = await resp.json();
+            throw new Error(errData.detail || 'Error al actualizar categoría');
+        }
+
+        // Actualizar en memoria
+        const idx = savedRecipes.findIndex(r => r.id === recipeId);
+        if (idx !== -1) savedRecipes[idx].category = newCat;
+        if (currentAnalysisRecipe && currentAnalysisRecipe.id === recipeId) {
+            currentAnalysisRecipe.category = newCat;
+        }
+
+        // Feedback visual en el modal
+        const check = document.getElementById(`cat-saved-check-${recipeId}`);
+        if (check) {
+            check.classList.remove('hidden');
+            setTimeout(() => {
+                if (check) check.classList.add('hidden');
+            }, 2500);
+        }
+
+        updateCategoryFilterCounts();
+        renderRecipesGrid();
+    } catch (e) {
+        alert('No se pudo guardar la categoría: ' + e.message);
+    }
+}
+
+async function triggerAutoFixPhotos() {
+    const btn = document.getElementById('btn-auto-fix-photos');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block animate-spin mr-1.5">✨</span> <span>Corrigiendo fotos...</span>';
+    }
+
+    try {
+        const resp = await fetch('/api/recipes/auto-fix-photos', { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Error al ejecutar la corrección automática.');
+
+        await loadSavedRecipes();
+        alert(`✅ ¡Completado! ${data.message || 'Fotos actualizadas correctamente.'}`);
+    } catch (e) {
+        alert('Aviso al auto-corregir fotos: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            safeCreateIcons();
+        }
+    }
 }
 
 // ==========================================

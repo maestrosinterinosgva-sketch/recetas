@@ -36,39 +36,66 @@ def extract_clean_recipe_title(title: str, description: str, source: str = "Red 
     return clean_title if clean_title else f"Receta de {source}"
 
 CULINARY_IMAGE_KEYWORDS = [
-    # Categorías específicas de desayunos y repostería primero (evitar que 'avena' o 'fruta' capture tortitas o crepes)
-    (["tartar", "aguacate"], "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&auto=format&fit=crop&q=80"),
+    # 1. Desayunos y meriendas/postres específicos (prioridad para evitar colisiones)
+    (["tortitas de avena con verduras", "tortita de verduras", "tortitas saladas"], "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&auto=format&fit=crop&q=80"),
     (["tortita", "pancake", "panqueque", "hotcake"], "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=700&auto=format&fit=crop&q=80"),
     (["crepe", "crepes"], "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=700&auto=format&fit=crop&q=80"),
     (["gofre", "waffle"], "https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=700&auto=format&fit=crop&q=80"),
     (["banana bread", "pan de plátano", "pan de platano"], "https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=700&auto=format&fit=crop&q=80"),
-    (["donut", "dona", "rosquilla"], "https://images.unsplash.com/photo-1527515862127-a4fc05baf7a5?w=700&auto=format&fit=crop&q=80"),
+    (["muffin", "magdalena", "cupcake"], "https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=700&auto=format&fit=crop&q=80"),
+    (["mousse", "fresa", "frambuesa"], "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=700&auto=format&fit=crop&q=80"),
     (["biscotti", "galleta", "cookie"], "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=700&auto=format&fit=crop&q=80"),
-    (["sandwich", "sándwich", "tosta", "tostada", "bocadillo"], "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=700&auto=format&fit=crop&q=80"),
-    (["empanada", "empanadilla"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
-    (["quiche", "tarta salada"], "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=700&auto=format&fit=crop&q=80"),
-    (["falafel", "faláfel"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
-    (["coliflor"], "https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?w=700&auto=format&fit=crop&q=80"),
-    (["maki", "sushi"], "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=700&auto=format&fit=crop&q=80"),
-    (["berenjena"], "https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=700&auto=format&fit=crop&q=80"),
     (["helado", "sorbete", "polo", "polos"], "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?w=700&auto=format&fit=crop&q=80"),
-    (["nugget", "nuggets"], "https://images.unsplash.com/photo-1562967914-608f82629710?w=700&auto=format&fit=crop&q=80"),
-    (["salmon", "salmón"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
-    (["carbonara", "spaghetti", "espagueti", "pasta", "macarron", "tallarin", "lasaña", "lasagna"], "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=700&auto=format&fit=crop&q=80"),
-    (["curry", "tikka"], "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=700&auto=format&fit=crop&q=80"),
-    (["pollo", "pechuga", "pavo"], "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=700&auto=format&fit=crop&q=80"),
-    (["ensalada", "salad", "xató", "xato"], "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&auto=format&fit=crop&q=80"),
-    (["poke", "bowl"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
-    (["lubina", "merluza", "bacalao", "pescado", "atun", "atún", "pulpo", "calamar", "marisco", "gamba"], "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=700&auto=format&fit=crop&q=80"),
-    (["crema", "sopa", "pure", "puré", "gazpacho", "salmorejo", "calabaza"], "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=700&auto=format&fit=crop&q=80"),
-    (["tortilla", "huevo", "revuelto", "frittata", "omelet"], "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=700&auto=format&fit=crop&q=80"),
-    (["albondiga", "albóndiga", "hamburguesa", "burger", "carne", "ternera", "bife", "solomillo", "lomo"], "https://images.unsplash.com/photo-1529042410759-befb1204b468?w=700&auto=format&fit=crop&q=80"),
-    (["arroz", "paella", "risotto", "basmati"], "https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=700&auto=format&fit=crop&q=80"),
-    (["lenteja", "garbanzo", "alubia", "judia", "judía", "hummus", "legumbre"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
-    (["wrap", "fajita", "burrito", "taco", "quesadilla"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
-    (["pizza", "focaccia"], "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&auto=format&fit=crop&q=80"),
+    (["bombón", "bombon", "ferrero", "chocolate"], "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=700&auto=format&fit=crop&q=80"),
+    (["pudding", "chía", "chia"], "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&auto=format&fit=crop&q=80"),
+    (["budwig", "porridge"], "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=700&auto=format&fit=crop&q=80"),
+    (["batido", "smoothie"], "https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=700&auto=format&fit=crop&q=80"),
+    (["naranja", "piña", "fruta"], "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=700&auto=format&fit=crop&q=80"),
+    (["donut", "dona", "rosquilla"], "https://images.unsplash.com/photo-1527515862127-a4fc05baf7a5?w=700&auto=format&fit=crop&q=80"),
     (["cake", "pastel", "bizcocho", "brownie", "postre", "dulce", "tarta"], "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=700&auto=format&fit=crop&q=80"),
-    (["smoothie", "batido", "avena", "porridge", "yogur", "fruta", "desayuno"], "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&auto=format&fit=crop&q=80")
+
+    # 2. Platos especiales y entrantes
+    (["ramen", "fideos"], "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=700&auto=format&fit=crop&q=80"),
+    (["ñoquis", "gnoquis", "gnocchi"], "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=700&auto=format&fit=crop&q=80"),
+    (["canelón", "canelon", "canelones", "lasaña", "lasagna"], "https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=700&auto=format&fit=crop&q=80"),
+    (["tartar", "aguacate", "guacamole", "dip"], "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&auto=format&fit=crop&q=80"),
+    (["hummus", "humus", "falafel", "faláfel"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
+    (["maki", "sushi"], "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=700&auto=format&fit=crop&q=80"),
+    (["coliflor", "brócoli", "brocoli"], "https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?w=700&auto=format&fit=crop&q=80"),
+    (["berenjena", "san jacobo"], "https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=700&auto=format&fit=crop&q=80"),
+    (["patata", "patatitas"], "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=700&auto=format&fit=crop&q=80"),
+    (["nugget", "nuggets", "croqueta", "croquetas"], "https://images.unsplash.com/photo-1562967914-608f82629710?w=700&auto=format&fit=crop&q=80"),
+
+    # 3. Pescados y Mariscos
+    (["salmon", "salmón"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
+    (["salpicón", "salpicon", "pulpo", "marisco", "langostino", "gamba", "sepia", "calamar"], "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=700&auto=format&fit=crop&q=80"),
+    (["lubina", "merluza", "bacalao", "dorada", "bonito", "atun", "atún", "sardina", "lenguado", "pescado"], "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=700&auto=format&fit=crop&q=80"),
+
+    # 4. Pastas, Arroces y Legumbres
+    (["carbonara", "spaghetti", "espagueti", "pasta", "macarron", "macarrones", "tallarin", "tallarines", "pajaritas"], "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=700&auto=format&fit=crop&q=80"),
+    (["arroz", "paella", "risotto", "basmati"], "https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=700&auto=format&fit=crop&q=80"),
+    (["lenteja", "lentejas"], "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=700&auto=format&fit=crop&q=80"),
+    (["garbanzo", "garbanzos"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
+    (["alubia", "alubias", "pochas", "verdinas", "judia", "judía", "legumbre", "guisante", "guisantes"], "https://images.unsplash.com/photo-1547496502-affa22d38842?w=700&auto=format&fit=crop&q=80"),
+
+    # 5. Carnes y Aves
+    (["curry", "tikka"], "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=700&auto=format&fit=crop&q=80"),
+    (["pollo", "pechuga", "pavo", "muslo", "brocheta", "brochetas"], "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=700&auto=format&fit=crop&q=80"),
+    (["solomillo", "ternera", "bife", "lomo", "chuleta", "cerdo", "conejo", "hamburguesa", "burger", "albondiga", "albóndiga", "carne"], "https://images.unsplash.com/photo-1544025162-d76694265947?w=700&auto=format&fit=crop&q=80"),
+
+    # 6. Bocadillos, Wraps y Pizzas
+    (["sandwich", "sándwich", "tosta", "tostada", "bocadillo"], "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=700&auto=format&fit=crop&q=80"),
+    (["wrap", "fajita", "burrito", "taco", "quesadilla", "empanada", "empanadilla", "pita", "pitas"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
+    (["pizza", "focaccia"], "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&auto=format&fit=crop&q=80"),
+
+    # 7. Huevos y Cremas
+    (["tortilla", "huevo", "revuelto", "frittata", "omelet", "pisto"], "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=700&auto=format&fit=crop&q=80"),
+    (["crema", "sopa", "pure", "puré", "gazpacho", "salmorejo", "calabaza"], "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=700&auto=format&fit=crop&q=80"),
+
+    # 8. Ensaladas, Bowls y Verduras variadas
+    (["ensalada", "salad", "xató", "xato", "carpaccio"], "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&auto=format&fit=crop&q=80"),
+    (["poke", "bowl", "buddha"], "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&auto=format&fit=crop&q=80"),
+    (["espinaca", "espinacas", "acelga", "acelgas", "alcachofa", "alcachofas", "calabacín", "calabacin", "zanahoria", "zanahorias", "kale", "chips", "avena"], "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&auto=format&fit=crop&q=80"),
 ]
 DEFAULT_CULINARY_IMAGE = "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=700&auto=format&fit=crop&q=80"
 
@@ -262,7 +289,7 @@ Tu misión es analizar la receta proporcionada (a través de texto, imágenes de
 6. Asignar etiquetas dietéticas relevantes (ej: 'Alta en proteína', 'Baja en carbohidratos', 'Keto', 'Vegana', 'Mediterránea', 'Baja en sodio').
 7. Proporcionar un veredicto nutricional profesional honesto (puntos fuertes, alertas y a qué objetivos deportivos o de salud se adapta mejor).
 8. Ofrecer 2-3 sugerencias concretas de sustituciones o trucos para hacer la receta aún más saludable y ligera.
-9. Asignar obligatoriamente la categoría del plato en el campo 'category' eligiendo exactamente uno de estos cuatro valores: 'desayuno', 'comida', 'merienda-postre', o 'cena'.
+9. Asignar obligatoriamente la categoría del plato en el campo 'category' eligiendo exactamente uno de estos cuatro valores: 'desayuno', 'comida', 'merienda', 'cena', o 'postre'.
 
 Debes responder siempre en español y cumplir estrictamente el esquema JSON indicado."""
 

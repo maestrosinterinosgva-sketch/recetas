@@ -592,7 +592,8 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
                             <option value="comida">🍽️ Comida principal</option>
                             <option value="cena">🌙 Cena rápida y ligera</option>
                             <option value="desayuno">🌅 Desayuno energético</option>
-                            <option value="merienda-postre">☕ Merienda / Postre fit</option>
+                            <option value="merienda">☕ Merienda saludable</option>
+                            <option value="postre">🍰 Postre fit</option>
                             <option value="cualquiera">Cualquiera</option>
                         </select>
                     </div>
@@ -922,32 +923,40 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
                     </h2>
                     <p class="text-sm text-slate-500 mt-0.5">Colección de recetas analizadas, comparadas y personalizadas.</p>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <input type="text" id="recipe-search" oninput="filterRecipesList()" placeholder="Buscar por nombre o ingrediente..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-64 bg-white">
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="recipe-search" oninput="filterRecipesList()" placeholder="Buscar por nombre o ingrediente..." class="px-3.5 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-xs w-60 bg-white">
+                    <button type="button" onclick="triggerAutoFixPhotos()" id="btn-auto-fix-photos" class="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Revisa todas las recetas y asigna fotos culinarias HD automáticamente">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Auto-corregir Fotos</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Category Filter Tabs -->
+            <!-- Category Filter Tabs (Desayuno, Comida, Merienda, Cena, Postre) -->
             <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" id="category-filter-container">
                 <button type="button" onclick="setCategoryFilter('all')" id="cat-btn-all" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 flex-shrink-0">
                     <span>Todas</span>
                     <span id="cat-count-all" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-white/20">0</span>
                 </button>
                 <button type="button" onclick="setCategoryFilter('desayuno')" id="cat-btn-desayuno" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
-                    <span>🌅 Desayunos</span>
+                    <span>🌅 Desayuno</span>
                     <span id="cat-count-desayuno" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
                 </button>
                 <button type="button" onclick="setCategoryFilter('comida')" id="cat-btn-comida" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
-                    <span>🍽️ Comidas</span>
+                    <span>🍽️ Comida</span>
                     <span id="cat-count-comida" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
                 </button>
-                <button type="button" onclick="setCategoryFilter('merienda-postre')" id="cat-btn-merienda-postre" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
-                    <span>☕ Meriendas & Postres</span>
-                    <span id="cat-count-merienda-postre" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                <button type="button" onclick="setCategoryFilter('merienda')" id="cat-btn-merienda" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>☕ Merienda</span>
+                    <span id="cat-count-merienda" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
                 </button>
                 <button type="button" onclick="setCategoryFilter('cena')" id="cat-btn-cena" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
-                    <span>🌙 Cenas</span>
+                    <span>🌙 Cena</span>
                     <span id="cat-count-cena" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+                <button type="button" onclick="setCategoryFilter('postre')" id="cat-btn-postre" class="cat-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center space-x-1.5 flex-shrink-0">
+                    <span>🍰 Postre</span>
+                    <span id="cat-count-postre" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-700">0</span>
                 </button>
             </div>
 
@@ -1229,6 +1238,6 @@ Pizca de sal y pimienta. Dorar el pollo y saltear con verduras..."></textarea>
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/app.js?v=2.3"></script>
+    <script src="/static/js/app.js?v=2.4"></script>
 </body>
 </html>

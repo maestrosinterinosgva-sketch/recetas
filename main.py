@@ -34,7 +34,8 @@ from app.gemini_service import (
     suggest_recipe_from_pantry,
     optimize_image_bytes,
     search_culinary_photos,
-    generate_recipe_image_ai
+    generate_recipe_image_ai,
+    get_culinary_image_for_title
 )
 from app.media_service import download_social_video_or_info, cleanup_file
 
@@ -186,6 +187,67 @@ async def api_generate_recipe_image(recipe_id: str):
     recipe["image_url"] = new_image_url
     saved = save_recipe(recipe)
     return {"success": True, "image_url": new_image_url, "recipe": saved}
+
+class RecipeCategoryUpdate(BaseModel):
+    category: str
+
+@app.patch("/api/recipes/{recipe_id}/category")
+async def api_update_recipe_category(recipe_id: str, payload: RecipeCategoryUpdate):
+    recipe = get_recipe(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+    
+    cat = payload.category.lower().strip()
+    if cat not in ["desayuno", "comida", "merienda", "cena", "postre"]:
+        raise HTTPException(status_code=400, detail="Categoría no válida. Debe ser: desayuno, comida, merienda, cena o postre.")
+    
+    recipe["category"] = cat
+    saved = save_recipe(recipe)
+    return {"success": True, "category": cat, "recipe": saved}
+
+@app.post("/api/recipes/auto-fix-photos")
+async def api_auto_fix_recipe_photos():
+    recipes = list_recipes()
+    updated_count = 0
+    updated_list = []
+    
+    for r in recipes:
+        curr_img = str(r.get("image_url") or "").strip()
+        # No tocar fotos subidas manualmente por el usuario (/uploads/...)
+        if curr_img.startswith("/uploads/"):
+            continue
+            
+        title = r.get("title", "")
+        suggested = get_culinary_image_for_title(title)
+        
+        # Criterios para actualizar automáticamente:
+        # 1. Foto de recetasderechupete (dan 404 o bloqueo por hotlinking)
+        # 2. Foto de google.com / miniaturas temporales gstatic
+        # 3. Foto rota / placeholder genérico
+        # 4. Foto que no coincide con la sugerida por el catálogo culinario de alta definición
+        needs_update = (
+            "recetasderechupete.com" in curr_img or
+            "encrypted-tbn0.gstatic.com" in curr_img or
+            "google.com" in curr_img or
+            "photo-1498837167922-ddd27525d352" in curr_img or
+            curr_img == "" or
+            (curr_img != suggested and not curr_img.startswith("/uploads/"))
+        )
+        
+        if needs_update and suggested and suggested != curr_img:
+            r["image_url"] = suggested
+            save_recipe(r)
+            updated_count += 1
+            updated_list.append({"id": r["id"], "title": title, "new_image": suggested})
+            
+    return {
+        "success": True,
+        "total_recipes": len(recipes),
+        "updated_count": updated_count,
+        "recipes": updated_list,
+        "message": f"Se han actualizado automáticamente {updated_count} fotos con imágenes gastronómicas de alta definición."
+    }
+
 
 # API Routes: Analyze Recipes
 @app.post("/api/analyze/text", response_model=Recipe)

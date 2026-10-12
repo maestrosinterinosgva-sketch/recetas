@@ -221,12 +221,20 @@ def save_recipe(recipe_data: Dict[str, Any]) -> Dict[str, Any]:
     source_type = recipe_data.get("source_type", "text")
 
     raw_cat = str(recipe_data.get("category") or "comida").lower().strip()
-    if "desayun" in raw_cat:
+    raw_title = str(recipe_data.get("title") or "").lower()
+    if raw_cat in ["desayuno", "comida", "merienda", "cena", "postre"]:
+        category = raw_cat
+    elif "desayun" in raw_cat:
         category = "desayuno"
-    elif any(k in raw_cat for k in ["postre", "meriend", "snack", "dulce", "batido", "helado", "galleta"]):
-        category = "merienda-postre"
+    elif "postre" in raw_cat:
+        category = "postre"
+    elif "meriend" in raw_cat:
+        category = "merienda"
     elif "cen" in raw_cat:
         category = "cena"
+    elif "merienda-postre" in raw_cat:
+        is_dessert = any(k in raw_title for k in ["mousse", "tarta", "pastel", "bizcocho", "brownie", "flan", "helado", "sorbete", "polo", "galleta", "cookie", "bombón", "bombon", "cake", "dulce", "pudding", "natillas", "chocolate"]) and "tartar" not in raw_title
+        category = "postre" if is_dessert else "merienda"
     else:
         category = "comida"
     recipe_data["category"] = category

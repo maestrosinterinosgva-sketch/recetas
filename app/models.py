@@ -33,7 +33,7 @@ class Recipe(BaseModel):
     source_type: str = Field("text", description="text, image, video_file, social_url, ai_generated")
     source_reference: Optional[str] = Field(None, description="URL de origen o nombre de archivo")
     video_url: Optional[str] = Field(None, description="URL directa del vídeo si proviene de redes sociales (Instagram, TikTok, YouTube)")
-    category: str = Field("comida", description="Momento del día / categoría: desayuno, comida, merienda-postre, cena")
+    category: str = Field("comida", description="Momento del día / categoría: desayuno, comida, merienda, cena, postre")
     image_url: Optional[str] = Field(None, description="URL o ruta de imagen si está disponible")
     ingredients: List[Ingredient] = Field(default_factory=list, description="Ingredientes de la receta")
     instructions: List[str] = Field(default_factory=list, description="Pasos de preparación detallados")
@@ -96,7 +96,7 @@ class FoodEstimateRequest(BaseModel):
 
 class PantryRecipeRequest(BaseModel):
     ingredients: str = Field(..., description="Ingredientes que tienes disponibles en casa")
-    meal_type: Optional[str] = Field("comida", description="desayuno, comida, merienda-postre, cena, cualquiera")
+    meal_type: Optional[str] = Field("comida", description="desayuno, comida, merienda, cena, postre, cualquiera")
     cooking_time: Optional[str] = Field("rapida", description="express (15m), media (30m), elaborada")
     servings: Optional[int] = Field(2, description="Número de raciones")
     dietary_preference: Optional[str] = Field("saludable", description="saludable, alta en proteina, baja en calorias, vegetariana")
