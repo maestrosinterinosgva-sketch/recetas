@@ -78,7 +78,14 @@ def on_startup():
 @app.get("/", response_class=HTMLResponse)
 async def serve_home(request: Request):
     index_file = BASE_DIR / "templates" / "index.html"
-    return FileResponse(str(index_file))
+    return FileResponse(
+        str(index_file),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 # API Routes: Config
 class ApiKeyPayload(BaseModel):

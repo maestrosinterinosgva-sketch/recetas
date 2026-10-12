@@ -37,6 +37,7 @@ def extract_clean_recipe_title(title: str, description: str, source: str = "Red 
 
 CULINARY_IMAGE_KEYWORDS = [
     # Categorías específicas de desayunos y repostería primero (evitar que 'avena' o 'fruta' capture tortitas o crepes)
+    (["tartar", "aguacate"], "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&auto=format&fit=crop&q=80"),
     (["tortita", "pancake", "panqueque", "hotcake"], "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=700&auto=format&fit=crop&q=80"),
     (["crepe", "crepes"], "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=700&auto=format&fit=crop&q=80"),
     (["gofre", "waffle"], "https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=700&auto=format&fit=crop&q=80"),
@@ -66,7 +67,7 @@ CULINARY_IMAGE_KEYWORDS = [
     (["lenteja", "garbanzo", "alubia", "judia", "judía", "hummus", "legumbre"], "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=700&auto=format&fit=crop&q=80"),
     (["wrap", "fajita", "burrito", "taco", "quesadilla"], "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=700&auto=format&fit=crop&q=80"),
     (["pizza", "focaccia"], "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&auto=format&fit=crop&q=80"),
-    (["cake", "tarta", "pastel", "bizcocho", "brownie", "postre", "dulce"], "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=700&auto=format&fit=crop&q=80"),
+    (["cake", "pastel", "bizcocho", "brownie", "postre", "dulce", "tarta"], "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=700&auto=format&fit=crop&q=80"),
     (["smoothie", "batido", "avena", "porridge", "yogur", "fruta", "desayuno"], "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&auto=format&fit=crop&q=80")
 ]
 DEFAULT_CULINARY_IMAGE = "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=700&auto=format&fit=crop&q=80"
@@ -75,8 +76,11 @@ def get_culinary_image_for_title(title: str) -> str:
     """Devuelve una fotografía gastronómica de alta definición adaptada a la temática de la receta."""
     lower = (title or "").lower()
     for keywords, url in CULINARY_IMAGE_KEYWORDS:
-        if any(k in lower for k in keywords):
-            return url
+        for k in keywords:
+            if k == "tarta" and "tartar" in lower:
+                continue
+            if k in lower:
+                return url
     return DEFAULT_CULINARY_IMAGE
 
 def search_culinary_photos(query: str, limit: int = 8) -> List[Dict[str, str]]:
@@ -100,7 +104,14 @@ def search_culinary_photos(query: str, limit: int = 8) -> List[Dict[str, str]]:
 
     # 1. Coincidencia en catálogo curado HD (tomamos la más específica)
     for keywords, url in CULINARY_IMAGE_KEYWORDS:
-        if any(k in lower_q for k in keywords):
+        matched = False
+        for k in keywords:
+            if k == "tarta" and "tartar" in lower_q:
+                continue
+            if k in lower_q:
+                matched = True
+                break
+        if matched:
             tag = keywords[0].capitalize()
             add_img(f"Foto HD recomendada ({tag})", url, "curated")
             break
